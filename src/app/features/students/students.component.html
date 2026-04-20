@@ -1,6 +1,12 @@
 <h2>Students</h2>
 
-<button (click)="logout()">Logout</button>
+<div style="margin-bottom: 20px;">
+  <h3>Add Student</h3>
+  <input [(ngModel)]="name" placeholder="Name" />
+  <input [(ngModel)]="className" placeholder="Class" />
+  <input [(ngModel)]="section" placeholder="Section" />
+  <button (click)="addStudent()">Add</button>
+</div>
 
 <p>Length: {{ students().length }}</p>
 
@@ -11,14 +17,46 @@
       <th>Name</th>
       <th>Class</th>
       <th>Section</th>
+      <th>Action</th>
     </tr>
 
     @for (s of students(); track s.id) {
       <tr>
         <td>{{ s.id }}</td>
-        <td>{{ s.name }}</td>
-        <td>{{ s.class }}</td>
-        <td>{{ s.section }}</td>
+
+        <td>
+          @if (editingId === s.id) {
+            <input [(ngModel)]="editName" />
+          } @else {
+            {{ s.name }}
+          }
+        </td>
+
+        <td>
+          @if (editingId === s.id) {
+            <input [(ngModel)]="editClass" />
+          } @else {
+            {{ s.class }}
+          }
+        </td>
+
+        <td>
+          @if (editingId === s.id) {
+            <input [(ngModel)]="editSection" />
+          } @else {
+            {{ s.section }}
+          }
+        </td>
+
+        <td>
+          @if (editingId === s.id) {
+            <button (click)="saveEdit(s.id)">Save</button>
+            <button (click)="cancelEdit()">Cancel</button>
+          } @else {
+            <button (click)="startEdit(s)">Edit</button>
+            <button (click)="deleteStudent(s.id)">Delete</button>
+          }
+        </td>
       </tr>
     }
   </table>

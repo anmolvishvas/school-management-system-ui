@@ -11,4 +11,20 @@ export class StudentsService {
   getAll() {
     return this.http.get<any[]>(this.api);
   }
+
+  add(student: any) {
+    return this.http.post(this.api, student);
+  }
+
+  delete(id: number) {
+    return this.http.delete(`${this.api}/${id}`, {
+      responseType: 'text'
+    });
+  }
+
+  update(id: number, student: any) {
+    return this.http.put(`${this.api}/${id}`, student, {
+      responseType: 'text'
+  });
+}
 }
