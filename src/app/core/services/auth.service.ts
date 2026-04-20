@@ -1,17 +1,21 @@
-import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { tap } from 'rxjs/operators';
 
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable({ providedIn: 'root' })
 export class AuthService {
 
   private api = 'http://localhost:5295/api/auth';
 
   constructor(private http: HttpClient) {}
 
-  login(data: any) {
-    return this.http.post(`${this.api}/login`, data);
+  login(data: { username: string; password: string }) {
+    return this.http.post<{ token: string }>(`${this.api}/login`, data)
+      .pipe(
+        tap(res => {
+          this.saveToken(res.token);
+        })
+      );
   }
 
   saveToken(token: string) {
@@ -20,5 +24,13 @@ export class AuthService {
 
   getToken() {
     return localStorage.getItem('token');
+  }
+
+  logout() {
+    localStorage.removeItem('token');
+  }
+
+  isLoggedIn(): boolean {
+    return !!this.getToken();
   }
 }
