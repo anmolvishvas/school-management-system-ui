@@ -1,5 +1,5 @@
-import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 
 @Injectable({ providedIn: 'root' })
 export class StudentsService {
@@ -9,6 +9,6 @@ export class StudentsService {
   constructor(private http: HttpClient) {}
 
   getAll() {
-    return this.http.get(this.api);
+    return this.http.get<any[]>(this.api);
   }
 }
