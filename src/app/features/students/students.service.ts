@@ -6,11 +6,13 @@ export class StudentsService {
 
   private api = 'http://localhost:5295/api/students';
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
-  getAll() {
-    return this.http.get<any[]>(this.api);
-  }
+  getAll(page: number, pageSize: number, search: string, sortBy: string, order: string, className: string, section: string) {
+  return this.http.get<any>(
+    `${this.api}?page=${page}&pageSize=${pageSize}&search=${search}&sortBy=${sortBy}&order=${order}&className=${className}&section=${section}`
+  );
+}
 
   add(student: any) {
     return this.http.post(this.api, student);
@@ -25,6 +27,6 @@ export class StudentsService {
   update(id: number, student: any) {
     return this.http.put(`${this.api}/${id}`, student, {
       responseType: 'text'
-  });
-}
+    });
+  }
 }
