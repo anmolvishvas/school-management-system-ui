@@ -1,6 +1,8 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { StudentsService } from './students.service';
+import { AuthService } from '../../core/services/auth.service';
+import { ToastService } from '../../core/services/toast.service';
 
 @Component({
     selector: 'app-students',
@@ -34,10 +36,18 @@ export class StudentsComponent implements OnInit {
     loading = signal(false);
     error = signal<string | null>(null);
 
-    constructor(private service: StudentsService) { }
+    
+    constructor(
+        private service: StudentsService,
+        private auth: AuthService,
+        private toast: ToastService
+    ) {}
+
+    role = '';
 
     ngOnInit() {
-        this.loadStudents();
+    this.role = this.auth.getRole() || '';
+    this.loadStudents();
     }
 
     loadStudents() {
@@ -81,10 +91,11 @@ export class StudentsComponent implements OnInit {
         this.name = '';
         this.className = '';
         this.section = '';
-        this.loadStudents();
+            this.loadStudents();
+        this.toast.show('Student added successfully', 'success');
         },
         error: () => {
-        this.error.set('Failed to add student');
+        this.toast.show('Failed to add student', 'error');
         this.loading.set(false);
         }
     });
@@ -115,9 +126,10 @@ export class StudentsComponent implements OnInit {
             next: () => {
             this.loadStudents();
             this.editingId = null;
+            this.toast.show('Student updated successfully', 'success');
             },
             error: () => {
-            this.error.set('Update failed');
+            this.toast.show('Update failed', 'error');
             this.loading.set(false);
             }
         });
@@ -131,10 +143,11 @@ export class StudentsComponent implements OnInit {
 
         this.service.delete(id).subscribe({
             next: () => {
-            this.loadStudents();
+                this.loadStudents();
+                this.toast.show('Student deleted successfully', 'success');
             },
             error: () => {
-            this.error.set('Delete failed');
+            this.toast.show('Delete failed', 'error');
             this.loading.set(false);
             }
         });

@@ -7,12 +7,14 @@
   <input [(ngModel)]="className" placeholder="Class" />
   <input [(ngModel)]="section" placeholder="Section" />
 
-  <button 
-    (click)="addStudent()" 
-    [disabled]="!isAddFormValid()"
-  >
-    Add
-  </button>
+  @if (role === 'Admin') {
+    <button 
+        (click)="addStudent()" 
+        [disabled]="!isAddFormValid()"
+    >
+        Add
+    </button>
+    }
 </div>
 
 @if (!isAddFormValid() && (name || className || section)) {
@@ -107,9 +109,12 @@
             </button>
             <button (click)="cancelEdit()">Cancel</button>
           } @else {
-            <button (click)="startEdit(s)">Edit</button>
-            <button (click)="deleteStudent(s.id)">Delete</button>
-          }
+                @if (role === 'Admin') {
+                <button (click)="startEdit(s)">Edit</button>
+                <button (click)="deleteStudent(s.id)">Delete</button>
+                }
+
+            }
         </td>
       </tr>
     }

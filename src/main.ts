@@ -8,6 +8,6 @@ import { routes } from './app/app.routes';
 bootstrapApplication(AppComponent, {
   providers: [
     provideHttpClient(withInterceptors([authInterceptor])),
-    provideRouter(routes)   // ✅ ADD THIS
+    provideRouter(routes)
   ]
 });

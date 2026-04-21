@@ -7,12 +7,19 @@ import { guestGuard } from './core/guards/guest-guard';
 export const routes: Routes = [
   {
     path: '',
-    component: LoginComponent,
-    canActivate: [guestGuard]   // ✅ block if already logged in
+    redirectTo: 'dashboard',
+    pathMatch: 'full' as const
+  },
+  {
+    path: 'login',
+    loadComponent: () => import('./features/auth/login/login.component').then(m => m.LoginComponent)
   },
   {
     path: 'students',
-    component: StudentsComponent,
-    canActivate: [authGuard]    // ✅ protect route
+    loadComponent: () => import('./features/students/students.component').then(m => m.StudentsComponent)
+  },
+  {
+    path: 'dashboard',
+    loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent)
   }
 ];

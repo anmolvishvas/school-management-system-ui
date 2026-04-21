@@ -1,0 +1,7 @@
+<div class="toast-container">
+  @for (t of toast.toasts(); track t.message) {
+    <div class="toast" [class]="t.type">
+      {{ t.message }}
+    </div>
+  }
+</div>
