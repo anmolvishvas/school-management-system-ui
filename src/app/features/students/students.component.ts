@@ -1,208 +1,175 @@
-import { Component, OnInit, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, OnInit, inject, signal } from '@angular/core';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
+import { MatCardModule } from '@angular/material/card';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatTableModule } from '@angular/material/table';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { MatSelectModule } from '@angular/material/select';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { StudentsService } from './students.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
+import type { Student } from '../../core/models/student.models';
+import { StudentFormDialogComponent } from './student-form-dialog.component';
 
 @Component({
-    selector: 'app-students',
-    standalone: true,
-    imports: [FormsModule],
-    templateUrl: './students.component.html'
+  selector: 'app-students',
+  standalone: true,
+  imports: [
+    ReactiveFormsModule,
+    MatCardModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatButtonModule,
+    MatIconModule,
+    MatTableModule,
+    MatPaginatorModule,
+    MatSelectModule,
+    MatSlideToggleModule,
+    MatProgressSpinnerModule,
+    MatDialogModule,
+    MatTooltipModule
+  ],
+  templateUrl: './students.component.html',
+  styleUrl: './students.component.css'
 })
 export class StudentsComponent implements OnInit {
+  private readonly service = inject(StudentsService);
+  readonly auth = inject(AuthService);
+  private readonly toast = inject(ToastService);
+  private readonly dialog = inject(MatDialog);
 
-    students = signal<any[]>([]);
+  readonly students = signal<Student[]>([]);
+  readonly total = signal(0);
+  readonly loading = signal(false);
+  readonly error = signal<string | null>(null);
 
-    searchTerm = '';
-    currentPage = signal(1);
-    pageSize = 5;
+  readonly searchCtrl = new FormControl('', { nonNullable: true });
+  readonly classCtrl = new FormControl('', { nonNullable: true });
+  readonly sectionCtrl = new FormControl('', { nonNullable: true });
+  readonly activeOnlyCtrl = new FormControl(false, { nonNullable: true });
 
-    name = '';
-    className = '';
-    section = '';
+  sortBy = 'id';
+  order: 'asc' | 'desc' = 'asc';
 
-    editingId: number | null = null;
-    editName = '';
-    editClass = '';
-    editSection = '';
+  pageIndex = 0;
+  pageSize = 10;
 
-    sortBy = 'id';
-    order = 'asc';
-    total = signal(0);
-    selectedClass = '';
-    selectedSection = '';
+  readonly displayedColumns = ['id', 'name', 'class', 'section', 'status', 'actions'];
 
-    loading = signal(false);
-    error = signal<string | null>(null);
+  ngOnInit(): void {
+    this.searchCtrl.valueChanges.pipe(debounceTime(300), distinctUntilChanged()).subscribe(() => {
+      this.pageIndex = 0;
+      this.load();
+    });
+    this.load();
+  }
 
-    
-    constructor(
-        private service: StudentsService,
-        private auth: AuthService,
-        private toast: ToastService
-    ) {}
+  displayClass(s: Student): string {
+    return (s.class ?? s.className ?? '').toString();
+  }
 
-    role = '';
-
-    ngOnInit() {
-    this.role = this.auth.getRole() || '';
-    this.loadStudents();
-    }
-
-    loadStudents() {
-        this.loading.set(true);
-        this.error.set(null);
-
-        this.service.getAll(
-            this.currentPage(),
-            this.pageSize,
-            this.searchTerm,
-            this.sortBy,
-            this.order,
-            this.selectedClass,
-            this.selectedSection
-        ).subscribe({
-            next: (res) => {
-            this.students.set(res.data);
-            this.total.set(res.total);
-            this.loading.set(false);
-            },
-            error: (err) => {
-            console.error(err);
-            this.error.set('Failed to load students');
-            this.loading.set(false);
-            }
-        });
-        }
-
-    addStudent() {
+  load(): void {
     this.loading.set(true);
     this.error.set(null);
-
-    const payload = {
-        name: this.name,
-        class: this.className,
-        section: this.section
-    };
-
-    this.service.add(payload).subscribe({
-        next: () => {
-        this.name = '';
-        this.className = '';
-        this.section = '';
-            this.loadStudents();
-        this.toast.show('Student added successfully', 'success');
+    this.service
+      .getPage({
+        page: this.pageIndex + 1,
+        pageSize: this.pageSize,
+        search: this.searchCtrl.value,
+        sortBy: this.sortBy,
+        order: this.order,
+        className: this.classCtrl.value,
+        section: this.sectionCtrl.value,
+        activeOnly: this.activeOnlyCtrl.value ? true : undefined
+      })
+      .subscribe({
+        next: (res) => {
+          this.students.set(res.data ?? []);
+          this.total.set(res.total ?? 0);
+          this.loading.set(false);
         },
         error: () => {
-        this.toast.show('Failed to add student', 'error');
-        this.loading.set(false);
+          this.error.set('Failed to load students.');
+          this.loading.set(false);
         }
+      });
+  }
+
+  onFilterChange(): void {
+    this.pageIndex = 0;
+    this.load();
+  }
+
+  onPage(e: PageEvent): void {
+    const sizeChanged = e.pageSize !== this.pageSize;
+    this.pageSize = e.pageSize;
+    this.pageIndex = sizeChanged ? 0 : e.pageIndex;
+    this.load();
+  }
+
+  applySort(): void {
+    this.pageIndex = 0;
+    this.load();
+  }
+
+  onSortBy(value: string): void {
+    this.sortBy = value;
+    this.applySort();
+  }
+
+  onOrderChange(value: string): void {
+    this.order = value === 'desc' ? 'desc' : 'asc';
+    this.applySort();
+  }
+
+  openCreate(): void {
+    this.dialog
+      .open(StudentFormDialogComponent, {
+        data: { mode: 'create' },
+        autoFocus: 'first-tabbable',
+        width: '640px'
+      })
+      .afterClosed()
+      .subscribe((saved) => {
+        if (saved) {
+          this.load();
+          this.toast.show('Student created', 'success');
+        }
+      });
+  }
+
+  openEdit(s: Student): void {
+    this.dialog
+      .open(StudentFormDialogComponent, {
+        data: { mode: 'edit', student: s },
+        autoFocus: 'first-tabbable',
+        width: '640px'
+      })
+      .afterClosed()
+      .subscribe((saved) => {
+        if (saved) {
+          this.load();
+          this.toast.show('Student updated', 'success');
+        }
+      });
+  }
+
+  deleteStudent(id: number): void {
+    if (!confirm('Delete this student?')) return;
+    this.service.delete(id).subscribe({
+      next: () => {
+        this.load();
+        this.toast.show('Student deleted', 'success');
+      },
+      error: () => this.toast.show('Delete failed', 'error')
     });
-    }
-
-    startEdit(s: any) {
-        this.editingId = s.id;
-        this.editName = s.name;
-        this.editClass = s.class;
-        this.editSection = s.section;
-    }
-
-    cancelEdit() {
-        this.editingId = null;
-    }
-
-    saveEdit(id: number) {
-        this.loading.set(true);
-        this.error.set(null);
-
-        const payload = {
-            name: this.editName,
-            class: this.editClass,
-            section: this.editSection
-        };
-
-        this.service.update(id, payload).subscribe({
-            next: () => {
-            this.loadStudents();
-            this.editingId = null;
-            this.toast.show('Student updated successfully', 'success');
-            },
-            error: () => {
-            this.toast.show('Update failed', 'error');
-            this.loading.set(false);
-            }
-        });
-    }
-
-    deleteStudent(id: number) {
-        if (!confirm('Delete this student?')) return;
-
-        this.loading.set(true);
-        this.error.set(null);
-
-        this.service.delete(id).subscribe({
-            next: () => {
-                this.loadStudents();
-                this.toast.show('Student deleted successfully', 'success');
-            },
-            error: () => {
-            this.toast.show('Delete failed', 'error');
-            this.loading.set(false);
-            }
-        });
-    }
-
-    isAddFormValid() {
-        return this.name.trim() && this.className.trim() && this.section.trim();
-    }
-
-    isEditFormValid() {
-        return this.editName.trim() && this.editClass.trim() && this.editSection.trim();
-    }
-
-    getFilteredStudents() {
-        const term = this.searchTerm.toLowerCase();
-
-        return this.students().filter(s =>
-            s.name?.toLowerCase().includes(term) ||
-            s.class?.toLowerCase().includes(term) ||
-            s.section?.toLowerCase().includes(term)
-        );
-    }
-
-    getPaginatedStudents() {
-        const start = (this.currentPage() - 1) * this.pageSize;
-        const end = start + this.pageSize;
-
-        return this.getFilteredStudents().slice(start, end);
-    }
-
-    getTotalPages() {
-        return Math.ceil(this.total() / this.pageSize);
-    }
-
-    nextPage() {
-        if (this.currentPage() < this.getTotalPages()) {
-            this.currentPage.set(this.currentPage() + 1);
-            this.loadStudents();
-        }
-    }
-
-    prevPage() {
-        if (this.currentPage() > 1) {
-            this.currentPage.set(this.currentPage() - 1);
-            this.loadStudents();
-        }
-    }
-
-    onSearchChange() {
-        this.currentPage.set(1);
-        this.loadStudents();
-    }
-
-    onFilterChange() {
-    this.currentPage.set(1);
-    this.loadStudents();
-    }
+  }
 }

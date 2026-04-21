@@ -1,26 +1,57 @@
 <div class="dashboard">
+  <h1 class="page-title">Dashboard</h1>
 
-  <h2>Dashboard</h2>
-
-  <div class="cards">
-    <div class="card total">
-      <h3>Total Students</h3>
-      <p>{{ total }}</p>
+  @if (loading()) {
+    <div class="center">
+      <mat-progress-spinner mode="indeterminate" diameter="48" />
     </div>
-  </div>
-
-  <div class="charts">
-
-    <div class="chart-card">
-      <h3>Students by Class</h3>
-      <canvas id="classChart"></canvas>
+  } @else {
+    <div class="kpi-row">
+      <mat-card class="kpi">
+        <mat-card-title>Total students</mat-card-title>
+        <mat-card-content>
+          <span class="kpi-value">{{ kpis()?.totalStudents ?? '—' }}</span>
+        </mat-card-content>
+      </mat-card>
+      <mat-card class="kpi">
+        <mat-card-title>Attendance rate</mat-card-title>
+        <mat-card-content>
+          <span class="kpi-value">{{ formatPercent(kpis()?.attendanceRatePercent ?? null) }}</span>
+          <p class="hint">Populated when the attendance module is connected.</p>
+        </mat-card-content>
+      </mat-card>
+      <mat-card class="kpi">
+        <mat-card-title>Fee collection (month)</mat-card-title>
+        <mat-card-content>
+          <span class="kpi-value">{{ formatCurrency(kpis()?.feeCollectionThisMonth ?? null) }}</span>
+          <p class="hint">Populated when the fee module is connected.</p>
+        </mat-card-content>
+      </mat-card>
     </div>
 
-    <div class="chart-card">
-      <h3>Students by Section</h3>
-      <canvas id="sectionChart"></canvas>
-    </div>
+    @if (statsMessage()) {
+      <p class="banner">{{ statsMessage() }}</p>
+    }
 
-  </div>
-
+    @if (stats(); as s) {
+      <div class="charts">
+        <mat-card class="chart-card">
+          <mat-card-header>
+            <mat-card-title>Students by class</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <canvas #classChart></canvas>
+          </mat-card-content>
+        </mat-card>
+        <mat-card class="chart-card">
+          <mat-card-header>
+            <mat-card-title>Students by section</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <canvas #sectionChart></canvas>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    }
+  }
 </div>

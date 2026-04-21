@@ -1,141 +1,111 @@
-<h2>Students</h2>
-
-<h3>Add Student</h3>
-
-<div style="margin-bottom: 20px;">
-  <input [(ngModel)]="name" placeholder="Name" />
-  <input [(ngModel)]="className" placeholder="Class" />
-  <input [(ngModel)]="section" placeholder="Section" />
-
-  @if (role === 'Admin') {
-    <button 
-        (click)="addStudent()" 
-        [disabled]="!isAddFormValid()"
-    >
-        Add
+<div class="page-head">
+  <h1>Students</h1>
+  @if (auth.isAdmin()) {
+    <button mat-flat-button color="primary" type="button" (click)="openCreate()">
+      <mat-icon>person_add</mat-icon>
+      Add student
     </button>
-    }
+  }
 </div>
 
-@if (!isAddFormValid() && (name || className || section)) {
-  <p style="color:red">All fields are required</p>
-}
-
-<p>Total: {{ getFilteredStudents().length }}</p>
-
-
-<input 
-  [(ngModel)]="searchTerm" 
-  (ngModelChange)="onSearchChange()"
-  placeholder="Search students..."
-/>
-
-<button (click)="sortBy='name'; order='asc'; loadStudents()">Name ↑</button>
-<button (click)="sortBy='name'; order='desc'; loadStudents()">Name ↓</button>
-
-<div style="margin: 10px 0;">
-  
-  <select [(ngModel)]="selectedClass" (ngModelChange)="onFilterChange()">
-    <option value="">All Classes</option>
-    <option value="MCA">MCA</option>
-    <option value="BCA">BCA</option>
-    <option value="BBA">BBA</option>
-  </select>
-
-  <select [(ngModel)]="selectedSection" (ngModelChange)="onFilterChange()">
-    <option value="">All Sections</option>
-    <option value="A">A</option>
-    <option value="B">B</option>
-    <option value="C">C</option>
-  </select>
-
-</div>
+<mat-card class="filters">
+  <mat-card-content class="filters-grid">
+    <mat-form-field appearance="outline" class="grow">
+      <mat-label>Search</mat-label>
+      <input matInput [formControl]="searchCtrl" placeholder="Name, admission, notes…" />
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Class</mat-label>
+      <input matInput [formControl]="classCtrl" (change)="onFilterChange()" />
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Section</mat-label>
+      <input matInput [formControl]="sectionCtrl" (change)="onFilterChange()" />
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Sort by</mat-label>
+      <mat-select [value]="sortBy" (valueChange)="onSortBy($event)">
+        <mat-option value="id">ID</mat-option>
+        <mat-option value="name">Name</mat-option>
+        <mat-option value="class">Class</mat-option>
+        <mat-option value="section">Section</mat-option>
+      </mat-select>
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Order</mat-label>
+      <mat-select [value]="order" (valueChange)="onOrderChange($event)">
+        <mat-option value="asc">Ascending</mat-option>
+        <mat-option value="desc">Descending</mat-option>
+      </mat-select>
+    </mat-form-field>
+    <div class="toggle-row">
+      <mat-slide-toggle [formControl]="activeOnlyCtrl" (change)="onFilterChange()">
+        Active only
+      </mat-slide-toggle>
+    </div>
+  </mat-card-content>
+</mat-card>
 
 @if (loading()) {
-  <div style="padding:10px;">
-    ⏳ Loading students...
+  <div class="center">
+    <mat-progress-spinner mode="indeterminate" diameter="40" />
   </div>
 }
 
 @if (error()) {
-  <p style="color:red">{{ error() }}</p>
+  <p class="error">{{ error() }}</p>
 }
 
-@if (!loading() && students().length > 0) {
-  <table border="1" style="border-collapse: collapse; width: 100%;">
-    <tr>
-      <th>ID</th>
-      <th>Name</th>
-      <th>Class</th>
-      <th>Section</th>
-      <th>Action</th>
-    </tr>
-
-    @for (s of students(); track s.id) {
-      <tr>
-        <td>{{ s.id }}</td>
-
-        <td>
-          @if (editingId === s.id) {
-            <input [(ngModel)]="editName" />
-          } @else {
-            {{ s.name }}
-          }
-        </td>
-
-        <td>
-          @if (editingId === s.id) {
-            <input [(ngModel)]="editClass" />
-          } @else {
-            {{ s.class }}
-          }
-        </td>
-
-        <td>
-          @if (editingId === s.id) {
-            <input [(ngModel)]="editSection" />
-          } @else {
-            {{ s.section }}
-          }
-        </td>
-
-        <td>
-          @if (editingId === s.id) {
-            <button 
-                (click)="saveEdit(s.id)" 
-                [disabled]="!isEditFormValid()"
-                >
-                Save
-            </button>
-            <button (click)="cancelEdit()">Cancel</button>
-          } @else {
-                @if (role === 'Admin') {
-                <button (click)="startEdit(s)">Edit</button>
-                <button (click)="deleteStudent(s.id)">Delete</button>
-                }
-
-            }
-        </td>
-      </tr>
-    }
+<div class="table-wrap mat-elevation-z1">
+  <table mat-table [dataSource]="students()" class="full-width">
+    <ng-container matColumnDef="id">
+      <th mat-header-cell *matHeaderCellDef>ID</th>
+      <td mat-cell *matCellDef="let s">{{ s.id }}</td>
+    </ng-container>
+    <ng-container matColumnDef="name">
+      <th mat-header-cell *matHeaderCellDef>Name</th>
+      <td mat-cell *matCellDef="let s">{{ s.name }}</td>
+    </ng-container>
+    <ng-container matColumnDef="class">
+      <th mat-header-cell *matHeaderCellDef>Class</th>
+      <td mat-cell *matCellDef="let s">{{ displayClass(s) }}</td>
+    </ng-container>
+    <ng-container matColumnDef="section">
+      <th mat-header-cell *matHeaderCellDef>Section</th>
+      <td mat-cell *matCellDef="let s">{{ s.section }}</td>
+    </ng-container>
+    <ng-container matColumnDef="status">
+      <th mat-header-cell *matHeaderCellDef>Status</th>
+      <td mat-cell *matCellDef="let s">
+        @if (s.isActive === false) {
+          <span class="badge inactive">Inactive</span>
+        } @else {
+          <span class="badge active">Active</span>
+        }
+      </td>
+    </ng-container>
+    <ng-container matColumnDef="actions">
+      <th mat-header-cell *matHeaderCellDef></th>
+      <td mat-cell *matCellDef="let s" class="actions">
+        @if (auth.isAdmin()) {
+          <button mat-icon-button type="button" matTooltip="Edit" (click)="openEdit(s)">
+            <mat-icon>edit</mat-icon>
+          </button>
+          <button mat-icon-button type="button" matTooltip="Delete" color="warn" (click)="deleteStudent(s.id)">
+            <mat-icon>delete</mat-icon>
+          </button>
+        }
+      </td>
+    </ng-container>
+    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+    <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
   </table>
-
-  <div style="margin-top: 10px;">
-  <button (click)="prevPage()" [disabled]="currentPage() === 1">
-    Prev
-  </button>
-
-  <span>
-    Page {{ currentPage() }} / {{ getTotalPages() }}
-  </span>
-
-  <button 
-    (click)="nextPage()" 
-    [disabled]="currentPage() === getTotalPages()"
-  >
-    Next
-  </button>
+  <mat-paginator
+    [length]="total()"
+    [pageIndex]="pageIndex"
+    [pageSize]="pageSize"
+    [pageSizeOptions]="[5, 10, 25, 50]"
+    (page)="onPage($event)"
+    showFirstLastButtons
+  />
 </div>
-} @else {
-  <p>No students found</p>
-}

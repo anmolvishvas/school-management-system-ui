@@ -1,32 +1,48 @@
-import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { Injectable, inject } from '@angular/core';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
+import type { PagedStudents, StudentUpsert } from '../../core/models/student.models';
+
+export interface StudentQuery {
+  page: number;
+  pageSize: number;
+  search?: string;
+  sortBy?: string;
+  order?: 'asc' | 'desc';
+  className?: string;
+  section?: string;
+  activeOnly?: boolean;
+}
 
 @Injectable({ providedIn: 'root' })
 export class StudentsService {
+  private readonly http = inject(HttpClient);
+  private readonly api = `${environment.apiBaseUrl}/api/Students`;
 
-  private api = 'http://localhost:5295/api/students';
+  getPage(q: StudentQuery) {
+    let params = new HttpParams()
+      .set('page', String(q.page))
+      .set('pageSize', String(q.pageSize))
+      .set('sortBy', q.sortBy ?? 'id')
+      .set('order', q.order ?? 'asc');
 
-  constructor(private http: HttpClient) { }
+    if (q.search?.trim()) params = params.set('search', q.search.trim());
+    if (q.className?.trim()) params = params.set('className', q.className.trim());
+    if (q.section?.trim()) params = params.set('section', q.section.trim());
+    if (q.activeOnly === true) params = params.set('activeOnly', 'true');
 
-  getAll(page: number, pageSize: number, search: string, sortBy: string, order: string, className: string, section: string) {
-  return this.http.get<any>(
-    `${this.api}?page=${page}&pageSize=${pageSize}&search=${search}&sortBy=${sortBy}&order=${order}&className=${className}&section=${section}`
-  );
-}
+    return this.http.get<PagedStudents>(this.api, { params });
+  }
 
-  add(student: any) {
+  add(student: StudentUpsert) {
     return this.http.post(this.api, student);
   }
 
   delete(id: number) {
-    return this.http.delete(`${this.api}/${id}`, {
-      responseType: 'text'
-    });
+    return this.http.delete(`${this.api}/${id}`, { responseType: 'text' });
   }
 
-  update(id: number, student: any) {
-    return this.http.put(`${this.api}/${id}`, student, {
-      responseType: 'text'
-    });
+  update(id: number, student: StudentUpsert) {
+    return this.http.put(`${this.api}/${id}`, student, { responseType: 'text' });
   }
 }

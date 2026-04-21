@@ -1,0 +1,21 @@
+.card {
+  max-width: 520px;
+}
+
+.full {
+  width: 100%;
+  display: block;
+  margin-bottom: 8px;
+}
+
+button[type='submit'] {
+  margin-top: 8px;
+  min-width: 160px;
+  min-height: 44px;
+}
+
+.btn-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}

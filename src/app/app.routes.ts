@@ -1,25 +1,63 @@
 import { Routes } from '@angular/router';
-import { LoginComponent } from './features/auth/login/login.component';
-import { StudentsComponent } from './features/students/students.component';
 import { authGuard } from './core/guards/auth-guard';
+import { adminGuard } from './core/guards/admin-guard';
 import { guestGuard } from './core/guards/guest-guard';
+import { MainLayoutComponent } from './layout/main-layout.component';
 
 export const routes: Routes = [
   {
-    path: '',
-    redirectTo: 'dashboard',
-    pathMatch: 'full' as const
-  },
-  {
     path: 'login',
-    loadComponent: () => import('./features/auth/login/login.component').then(m => m.LoginComponent)
+    canActivate: [guestGuard],
+    loadComponent: () =>
+      import('./features/auth/login/login.component').then((m) => m.LoginComponent)
   },
   {
-    path: 'students',
-    loadComponent: () => import('./features/students/students.component').then(m => m.StudentsComponent)
+    path: '',
+    component: MainLayoutComponent,
+    canActivate: [authGuard],
+    children: [
+      { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
+      {
+        path: 'register',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./features/auth/register/register.component').then((m) => m.RegisterComponent)
+      },
+      {
+        path: 'dashboard',
+        loadComponent: () =>
+          import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent)
+      },
+      {
+        path: 'students',
+        loadComponent: () =>
+          import('./features/students/students.component').then((m) => m.StudentsComponent)
+      },
+      {
+        path: 'attendance',
+        data: { title: 'Attendance' },
+        loadComponent: () =>
+          import('./features/shell/coming-soon.component').then((m) => m.ComingSoonComponent)
+      },
+      {
+        path: 'fees',
+        data: { title: 'Fee management' },
+        loadComponent: () =>
+          import('./features/shell/coming-soon.component').then((m) => m.ComingSoonComponent)
+      },
+      {
+        path: 'timetable',
+        data: { title: 'Timetable & scheduling' },
+        loadComponent: () =>
+          import('./features/shell/coming-soon.component').then((m) => m.ComingSoonComponent)
+      },
+      {
+        path: 'reports',
+        data: { title: 'Reports & analytics' },
+        loadComponent: () =>
+          import('./features/shell/coming-soon.component').then((m) => m.ComingSoonComponent)
+      }
+    ]
   },
-  {
-    path: 'dashboard',
-    loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent)
-  }
+  { path: '**', redirectTo: '/dashboard' }
 ];

@@ -1,26 +1,81 @@
-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 10px;
+.page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
 }
 
-th,
-td {
-    padding: 8px;
-    text-align: left;
+.page-head h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 500;
 }
 
-th {
-    background-color: #f4f4f4;
+.filters {
+  margin-bottom: 16px;
 }
 
-button {
-    margin-right: 5px;
-    padding: 4px 8px;
-    cursor: pointer;
+.filters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  align-items: center;
 }
 
-input {
-    margin-right: 8px;
-    padding: 4px;
+.grow {
+  grid-column: span 2;
+}
+
+@media (max-width: 720px) {
+  .grow {
+    grid-column: span 1;
+  }
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  min-height: 56px;
+}
+
+.center {
+  display: flex;
+  justify-content: center;
+  padding: 24px;
+}
+
+.error {
+  color: var(--mat-sys-error);
+}
+
+.table-wrap {
+  overflow: auto;
+  border-radius: 8px;
+  background: var(--mat-sys-surface);
+}
+
+.full-width {
+  width: 100%;
+}
+
+.actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.badge {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.badge.active {
+  background: color-mix(in srgb, #2e7d32 18%, transparent);
+  color: #1b5e20;
+}
+
+.badge.inactive {
+  background: color-mix(in srgb, #c62828 14%, transparent);
+  color: #b71c1c;
 }
