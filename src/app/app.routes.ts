@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth-guard';
 import { adminGuard } from './core/guards/admin-guard';
+import { accountantGuard } from './core/guards/accountant-guard';
 import { guestGuard } from './core/guards/guest-guard';
 import { MainLayoutComponent } from './layout/main-layout.component';
 
@@ -52,15 +53,21 @@ export const routes: Routes = [
           import('./features/teachers/teachers.component').then((m) => m.TeachersComponent)
       },
       {
+        path: 'accounts',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./features/accounts/accounts.component').then((m) => m.AccountsComponent)
+      },
+      {
         path: 'attendance',
         loadComponent: () =>
           import('./features/attendance/attendance.component').then((m) => m.AttendanceComponent)
       },
       {
         path: 'fees',
+        canActivate: [accountantGuard],
         data: { title: 'Fee management' },
-        loadComponent: () =>
-          import('./features/shell/coming-soon.component').then((m) => m.ComingSoonComponent)
+        loadComponent: () => import('./features/fees/fees.component').then((m) => m.FeesComponent)
       },
       {
         path: 'timetable',
@@ -71,7 +78,7 @@ export const routes: Routes = [
         path: 'reports',
         data: { title: 'Reports & analytics' },
         loadComponent: () =>
-          import('./features/shell/coming-soon.component').then((m) => m.ComingSoonComponent)
+          import('./features/reports/reports.component').then((m) => m.ReportsComponent)
       }
     ]
   },

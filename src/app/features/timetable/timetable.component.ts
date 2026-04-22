@@ -9,12 +9,15 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTableModule } from '@angular/material/table';
+import { Router } from '@angular/router';
 import type { Course, CourseSection } from '../../core/models/courses.models';
 import type { Subject } from '../../core/models/subjects.models';
 import type { Teacher } from '../../core/models/teachers.models';
 import type { TimetableDayOfWeek, TimetableEntry } from '../../core/models/timetable.models';
+import type { Student } from '../../core/models/student.models';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
+import { StudentsService } from '../students/students.service';
 import { CoursesService } from '../courses/courses.service';
 import { SubjectsService } from '../subjects/subjects.service';
 import { TeachersService } from '../attendance/teachers.service';
@@ -44,7 +47,9 @@ export class TimetableComponent implements OnInit {
   private readonly coursesService = inject(CoursesService);
   private readonly subjectsService = inject(SubjectsService);
   private readonly teachersService = inject(TeachersService);
+  private readonly studentsService = inject(StudentsService);
   private readonly toast = inject(ToastService);
+  private readonly router = inject(Router);
 
   readonly auth = inject(AuthService);
   readonly isTeacher = computed(() => this.auth.hasRole('Teacher') && !this.auth.isAdmin());
@@ -62,6 +67,9 @@ export class TimetableComponent implements OnInit {
   readonly submitting = signal(false);
   readonly entries = signal<TimetableEntry[]>([]);
   readonly classSectionEntries = signal<TimetableEntry[]>([]);
+  readonly selectedWeeklySlot = signal<TimetableEntry | null>(null);
+  readonly slotStudents = signal<Student[]>([]);
+  readonly slotStudentsLoading = signal(false);
   readonly total = signal(0);
   readonly teacherScopedId = signal<number | null>(null);
   readonly teacherScopeReady = signal(false);
@@ -462,5 +470,75 @@ export class TimetableComponent implements OnInit {
       const slot = start === 'H' ? `Hour ${endOrHour}` : `${this.toHm(start)} - ${this.toHm(endOrHour)}`;
       return { slot, cells };
     });
+  }
+
+  viewStudentsForSlot(slot: TimetableEntry): void {
+    const className = this.getClassValue(slot);
+    const section = slot.section ?? '';
+    if (!className || className === '—' || !section) {
+      this.toast.show('Class/section missing for selected slot.', 'error');
+      return;
+    }
+    this.selectedWeeklySlot.set(slot);
+    this.slotStudentsLoading.set(true);
+    this.studentsService
+      .getPage({
+        page: 1,
+        pageSize: 200,
+        className,
+        section,
+        activeOnly: true,
+        sortBy: 'name',
+        order: 'asc'
+      })
+      .subscribe({
+        next: (res) => {
+          this.slotStudents.set(res.data ?? []);
+          this.slotStudentsLoading.set(false);
+        },
+        error: () => {
+          this.slotStudents.set([]);
+          this.slotStudentsLoading.set(false);
+          this.toast.show('Failed to load students for selected slot.', 'error');
+        }
+      });
+  }
+
+  doAttendanceForSlot(slot: TimetableEntry): void {
+    const className = this.getClassValue(slot);
+    const section = slot.section ?? '';
+    if (!className || className === '—' || !section) {
+      this.toast.show('Class/section missing for selected slot.', 'error');
+      return;
+    }
+    const date = this.nextDateForDay(slot.dayOfWeek);
+    void this.router.navigate(['/attendance'], {
+      queryParams: {
+        className,
+        section,
+        date,
+        timetableEntryId: slot.id
+      }
+    });
+  }
+
+  private nextDateForDay(day: TimetableDayOfWeek): string {
+    const target: Record<TimetableDayOfWeek, number> = {
+      Sunday: 0,
+      Monday: 1,
+      Tuesday: 2,
+      Wednesday: 3,
+      Thursday: 4,
+      Friday: 5,
+      Saturday: 6
+    };
+    const now = new Date();
+    const delta = (target[day] - now.getDay() + 7) % 7;
+    const dt = new Date(now);
+    dt.setDate(now.getDate() + delta);
+    const y = dt.getFullYear();
+    const m = String(dt.getMonth() + 1).padStart(2, '0');
+    const d = String(dt.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
   }
 }

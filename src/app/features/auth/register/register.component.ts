@@ -1,6 +1,6 @@
-import { Component, inject } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -26,10 +26,11 @@ import type { AppRole } from '../../../core/models/auth.models';
   templateUrl: './register.component.html',
   styleUrl: './register.component.css'
 })
-export class RegisterComponent {
+export class RegisterComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly toast = inject(ToastService);
 
   readonly roles: AppRole[] = ['Admin', 'Teacher', 'Student', 'Accountant'];
@@ -44,6 +45,14 @@ export class RegisterComponent {
   });
 
   submitting = false;
+
+  ngOnInit(): void {
+    const q = this.route.snapshot.queryParamMap.get('role')?.trim();
+    if (q && this.roles.some((r) => r.toLowerCase() === q.toLowerCase())) {
+      const match = this.roles.find((r) => r.toLowerCase() === q.toLowerCase())!;
+      this.form.patchValue({ role: match });
+    }
+  }
 
   submit() {
     if (this.form.invalid) {

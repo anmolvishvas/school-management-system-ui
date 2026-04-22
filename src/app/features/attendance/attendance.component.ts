@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -14,12 +15,13 @@ import { AttendanceService } from './attendance.service';
 import { PeriodAttendanceService } from './period-attendance.service';
 import { TeachersService } from './teachers.service';
 import { SubjectsService } from '../subjects/subjects.service';
+import { TimetableService } from '../timetable/timetable.service';
 import { ToastService } from '../../core/services/toast.service';
 import { AuthService } from '../../core/services/auth.service';
 import type {
   AttendanceBulkDayRequest,
   AttendanceRecord,
-  PeriodAttendanceBulkMarkRequest,
+  PeriodAttendanceBulkMarkTimetableRequest,
   PeriodAttendanceRecord,
   AttendanceStatus,
   AttendanceSummary
@@ -28,6 +30,7 @@ import type { Subject } from '../../core/models/subjects.models';
 import type { Student } from '../../core/models/student.models';
 import { StudentsService } from '../students/students.service';
 import type { Teacher, TeacherAllocation, TeacherTeachingPlan } from '../../core/models/teachers.models';
+import type { TimetableEntry, TimetableDayOfWeek } from '../../core/models/timetable.models';
 
 interface DayPeriod {
   id: number;
@@ -61,8 +64,10 @@ export class AttendanceComponent implements OnInit {
   private readonly periodAttendance = inject(PeriodAttendanceService);
   private readonly teachersService = inject(TeachersService);
   private readonly subjectsService = inject(SubjectsService);
+  private readonly timetableService = inject(TimetableService);
   private readonly studentsService = inject(StudentsService);
   private readonly toast = inject(ToastService);
+  private readonly route = inject(ActivatedRoute);
   readonly auth = inject(AuthService);
 
   readonly dateCtrl = new FormControl(this.todayISO(), { nonNullable: true });
@@ -76,6 +81,7 @@ export class AttendanceComponent implements OnInit {
   readonly endTimeCtrl = new FormControl('10:00', { nonNullable: true });
   readonly hourNumberCtrl = new FormControl(1, { nonNullable: true });
   readonly periodSubjectIdCtrl = new FormControl<number | null>(null);
+  readonly timetableEntryIdCtrl = new FormControl<number | null>(null);
 
   readonly subjectNameCtrl = new FormControl('', { nonNullable: true });
   readonly allocationTeacherIdCtrl = new FormControl<number | null>(null);
@@ -88,6 +94,7 @@ export class AttendanceComponent implements OnInit {
   readonly subjects = signal<Subject[]>([]);
   readonly teachers = signal<Teacher[]>([]);
   readonly allocations = signal<TeacherAllocation[]>([]);
+  readonly timetableSlots = signal<TimetableEntry[]>([]);
   readonly selectedTeacherPlan = signal<TeacherTeachingPlan | null>(null);
   readonly loadingSheet = signal(false);
   readonly loadingPeriodSheet = signal(false);
@@ -114,7 +121,7 @@ export class AttendanceComponent implements OnInit {
   readonly listColumns = ['date', 'studentId', 'studentName', 'className', 'section', 'status', 'notes', 'actions'];
   readonly periodListColumns = [
     'date',
-    'hourNumber',
+    'timeRange',
     'subjectName',
     'teacherName',
     'studentId',
@@ -124,6 +131,7 @@ export class AttendanceComponent implements OnInit {
   ];
 
   ngOnInit(): void {
+    this.applyPrefillFromQuery();
     this.seedDefaultPeriod();
     this.loadStudentsForBulk();
     this.loadSubjects();
@@ -134,18 +142,37 @@ export class AttendanceComponent implements OnInit {
     this.loadSummary();
     this.loadAttendanceList();
     this.loadPeriodAttendanceList();
+    this.loadTimetableSlots();
+  }
+
+  private applyPrefillFromQuery(): void {
+    const qp = this.route.snapshot.queryParamMap;
+    const className = qp.get('className')?.trim() ?? '';
+    const section = qp.get('section')?.trim() ?? '';
+    const date = qp.get('date')?.trim() ?? '';
+    const timetableEntryIdRaw = qp.get('timetableEntryId');
+    if (className) this.classCtrl.setValue(className);
+    if (section) this.sectionCtrl.setValue(section);
+    if (date) {
+      this.dateCtrl.setValue(date);
+      this.fromCtrl.setValue(date);
+      this.toCtrl.setValue(date);
+    }
+    if (timetableEntryIdRaw) {
+      const id = Number(timetableEntryIdRaw);
+      if (Number.isFinite(id) && id > 0) this.timetableEntryIdCtrl.setValue(id);
+    }
   }
 
   onFilterChange(): void {
     this.loadStudentsForBulk();
     this.loadDaily();
-    this.loadPeriodDaily();
     this.loadSummary();
     this.listPageIndex = 0;
     this.periodListPageIndex = 0;
     this.loadAllocations();
     this.loadAttendanceList();
-    this.loadPeriodAttendanceList();
+    this.loadTimetableSlots();
   }
 
   private loadStudentsForBulk(): void {
@@ -207,11 +234,14 @@ export class AttendanceComponent implements OnInit {
   }
 
   loadPeriodDaily(): void {
-    const subjectId = this.periodSubjectIdCtrl.value;
-    if (!subjectId) {
+    const slotId = this.timetableEntryIdCtrl.value;
+    const slot = this.timetableSlots().find((s) => s.id === slotId) ?? null;
+    if (!slot) {
       this.periodRows.set([]);
       return;
     }
+    const subjectId = slot.subjectId;
+    const hourNumber = slot.hourNumber;
     this.loadingPeriodSheet.set(true);
     this.periodAttendance
       .getList({
@@ -221,7 +251,7 @@ export class AttendanceComponent implements OnInit {
         section: this.sectionCtrl.value || undefined,
         dateFrom: this.dateCtrl.value,
         dateTo: this.dateCtrl.value,
-        hourNumber: this.hourNumberCtrl.value,
+        hourNumber: hourNumber || undefined,
         subjectId
       })
       .subscribe({
@@ -267,9 +297,65 @@ export class AttendanceComponent implements OnInit {
 
   loadTeachers(): void {
     this.teachersService.getTeachers(true).subscribe({
-      next: (rows) => this.teachers.set(rows ?? []),
-      error: () => this.teachers.set([])
+      next: (rows) => {
+        this.teachers.set(rows ?? []);
+        this.loadTimetableSlots();
+      },
+      error: () => {
+        this.teachers.set([]);
+        this.loadTimetableSlots();
+      }
     });
+  }
+
+  loadTimetableSlots(): void {
+    const className = this.classCtrl.value.trim();
+    const section = this.sectionCtrl.value.trim();
+    if (!className || !section) {
+      this.timetableSlots.set([]);
+      this.timetableEntryIdCtrl.setValue(null);
+      this.periodRows.set([]);
+      this.periodAttendanceList.set([]);
+      this.periodListTotal.set(0);
+      return;
+    }
+    const dayOfWeek = this.dayOfWeekFromISO(this.dateCtrl.value);
+    const teacherId = this.currentTeacherIdOrUndefined();
+    this.timetableService
+      .getPage({
+        page: 1,
+        pageSize: 200,
+        className,
+        section,
+        dayOfWeek,
+        teacherId,
+        activeOnly: true
+      })
+      .subscribe({
+        next: (res) => {
+          const rows = (res.data ?? []).slice().sort((a, b) => this.slotSortKey(a).localeCompare(this.slotSortKey(b)));
+          this.timetableSlots.set(rows);
+          const current = this.timetableEntryIdCtrl.value;
+          if (!current || !rows.some((r) => r.id === current)) {
+            this.timetableEntryIdCtrl.setValue(rows.length ? rows[0].id : null);
+          }
+          this.loadPeriodDaily();
+          this.loadPeriodAttendanceList();
+        },
+        error: () => {
+          this.timetableSlots.set([]);
+          this.timetableEntryIdCtrl.setValue(null);
+          this.periodRows.set([]);
+          this.periodAttendanceList.set([]);
+          this.periodListTotal.set(0);
+        }
+      });
+  }
+
+  onTimetableSlotChange(slotId: number | null): void {
+    this.timetableEntryIdCtrl.setValue(slotId);
+    this.loadPeriodDaily();
+    this.loadPeriodAttendanceList();
   }
 
   loadAllocations(): void {
@@ -329,6 +415,8 @@ export class AttendanceComponent implements OnInit {
   }
 
   loadPeriodAttendanceList(): void {
+    const slotId = this.timetableEntryIdCtrl.value;
+    const slot = this.timetableSlots().find((s) => s.id === slotId) ?? null;
     this.periodListLoading.set(true);
     this.periodAttendance
       .getList({
@@ -338,8 +426,8 @@ export class AttendanceComponent implements OnInit {
         section: this.sectionCtrl.value || undefined,
         dateFrom: this.fromCtrl.value || undefined,
         dateTo: this.toCtrl.value || undefined,
-        subjectId: this.periodSubjectIdCtrl.value ?? undefined,
-        hourNumber: this.hourNumberCtrl.value || undefined
+        subjectId: slot?.subjectId ?? undefined,
+        hourNumber: slot?.hourNumber ?? undefined
       })
       .subscribe({
         next: (res) => {
@@ -458,20 +546,18 @@ export class AttendanceComponent implements OnInit {
   }
 
   savePeriodAttendance(): void {
-    const className = this.classCtrl.value.trim();
-    const section = this.sectionCtrl.value.trim();
-    const subjectId = this.periodSubjectIdCtrl.value;
-    const hourNumber = this.hourNumberCtrl.value;
-    if (!className || !section || !subjectId || !hourNumber) {
-      this.toast.show('Class, section, subject and hour are required for period attendance.', 'error');
+    const timetableEntryId = this.timetableEntryIdCtrl.value;
+    if (!timetableEntryId) {
+      this.toast.show('Select a timetable slot for this date/class/section first.', 'error');
       return;
     }
-    const payload: PeriodAttendanceBulkMarkRequest = {
+    if (!this.periodRows().length) {
+      this.toast.show('No students found for this timetable slot.', 'error');
+      return;
+    }
+    const payload: PeriodAttendanceBulkMarkTimetableRequest = {
       date: this.dateCtrl.value,
-      class: className,
-      section,
-      subjectId,
-      hourNumber,
+      timetableEntryId,
       lines: this.periodRows().map((r) => ({
         studentId: r.studentId,
         status: r.status,
@@ -479,10 +565,10 @@ export class AttendanceComponent implements OnInit {
       }))
     };
     this.periodSaving.set(true);
-    this.periodAttendance.bulkMark(payload).subscribe({
+    this.periodAttendance.bulkMarkTimetable(payload).subscribe({
       next: () => {
         this.periodSaving.set(false);
-        this.toast.show('Period attendance saved.', 'success');
+        this.toast.show('Period attendance saved from timetable slot.', 'success');
         this.loadPeriodAttendanceList();
       },
       error: () => {
@@ -683,5 +769,36 @@ export class AttendanceComponent implements OnInit {
     const y = now.getFullYear();
     const m = String(now.getMonth() + 1).padStart(2, '0');
     return `${y}-${m}-01`;
+  }
+
+  private dayOfWeekFromISO(date: string): TimetableDayOfWeek {
+    const d = new Date(`${date}T00:00:00`);
+    const map: TimetableDayOfWeek[] = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    return map[d.getDay()] ?? 'Monday';
+  }
+
+  private currentTeacherIdOrUndefined(): number | undefined {
+    if (!this.auth.hasRole('Teacher') || this.auth.hasRole('Admin')) return undefined;
+    const userId = this.auth.getUserId();
+    if (!userId) return undefined;
+    const teacher = this.teachers().find((t) => t.userId === userId);
+    return teacher?.id;
+  }
+
+  private slotSortKey(slot: TimetableEntry): string {
+    if (slot.startTime && slot.endTime) return `${slot.startTime}-${slot.endTime}`;
+    return `hour-${slot.hourNumber ?? 999}`;
+  }
+
+  formatTimetableSlot(slot: TimetableEntry): string {
+    const cls = slot.class ?? slot.className ?? '-';
+    const sec = slot.section ?? '-';
+    const time = slot.startTime && slot.endTime ? `${slot.startTime.slice(0, 5)}-${slot.endTime.slice(0, 5)}` : `Hour ${slot.hourNumber ?? '-'}`;
+    return `${slot.dayOfWeek} ${time} | ${slot.subjectName || slot.subjectId} | ${cls}/${sec}`;
+  }
+
+  periodTimeLabel(row: PeriodAttendanceRecord): string {
+    if (row.startTime && row.endTime) return `${row.startTime.slice(0, 5)}-${row.endTime.slice(0, 5)}`;
+    return `Hour ${row.hourNumber}`;
   }
 }

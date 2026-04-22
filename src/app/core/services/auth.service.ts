@@ -122,6 +122,10 @@ export class AuthService {
     return this.hasRole('Admin');
   }
 
+  isAccountant(): boolean {
+    return this.hasRole('Accountant');
+  }
+
   getUserId(): number | null {
     const payload = this.decodePayload();
     if (!payload) return null;

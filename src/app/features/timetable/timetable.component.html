@@ -244,6 +244,10 @@
                       <div>{{ cell.subjectName || cell.subjectId }}</div>
                       <div>{{ cell.teacherName || cell.teacherId }}</div>
                       <div>{{ getClassValue(cell) }}/{{ cell.section || '-' }}</div>
+                      <div class="cal-actions">
+                        <button mat-stroked-button type="button" (click)="viewStudentsForSlot(cell)">Students</button>
+                        <button mat-flat-button color="primary" type="button" (click)="doAttendanceForSlot(cell)">Do Attendance</button>
+                      </div>
                     </div>
                   } @else {
                     <span class="muted">—</span>
@@ -257,6 +261,28 @@
     </div>
   </mat-card-content>
 </mat-card>
+
+@if (selectedWeeklySlot(); as slot) {
+  <mat-card class="mt">
+    <mat-card-header>
+      <mat-card-title>Students for {{ getClassValue(slot) }}/{{ slot.section || '-' }}</mat-card-title>
+      <mat-card-subtitle>{{ slot.dayOfWeek }} {{ getTimeRange(slot) }} | {{ slot.subjectName || slot.subjectId }}</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      @if (slotStudentsLoading()) {
+        <div class="loader"><mat-progress-spinner diameter="30" mode="indeterminate" /></div>
+      } @else if (slotStudents().length) {
+        <div class="student-list">
+          @for (s of slotStudents(); track s.id) {
+            <span>{{ s.name }} ({{ s.id }})</span>
+          }
+        </div>
+      } @else {
+        <p class="muted">No active students found for this class/section.</p>
+      }
+    </mat-card-content>
+  </mat-card>
+}
 
 @if (classSectionEntries().length > 0) {
   <mat-card class="mt">

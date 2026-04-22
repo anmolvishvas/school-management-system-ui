@@ -1,0 +1,62 @@
+.page-head h1 {
+  margin: 0 0 8px;
+  font-size: 1.5rem;
+}
+
+.muted {
+  margin: 0 0 16px;
+  opacity: 0.75;
+  font-size: 0.9rem;
+}
+
+.filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+.loader {
+  display: flex;
+  justify-content: center;
+  padding: 24px;
+}
+
+.grid {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.grid .wide {
+  grid-column: 1 / -1;
+}
+
+.kv {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.kv li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--mat-sys-outline) 35%, transparent);
+}
+
+.kv li span {
+  opacity: 0.85;
+}
+
+.kv.compact li {
+  padding: 4px 0;
+}
+
+.sub {
+  margin: 12px 0 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}

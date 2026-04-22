@@ -68,14 +68,22 @@ import { AuthService } from '../core/services/auth.service';
               <span matListItemTitle>Teachers</span>
             </a>
           }
+          @if (auth.isAdmin()) {
+            <a mat-list-item routerLink="/accounts" routerLinkActive="active-link" (click)="closeOnHandset(drawer)">
+              <mat-icon matListItemIcon>account_balance</mat-icon>
+              <span matListItemTitle>Accountants</span>
+            </a>
+          }
           <a mat-list-item routerLink="/attendance" routerLinkActive="active-link" (click)="closeOnHandset(drawer)">
             <mat-icon matListItemIcon>event_available</mat-icon>
             <span matListItemTitle>Attendance</span>
           </a>
-          <a mat-list-item routerLink="/fees" routerLinkActive="active-link" (click)="closeOnHandset(drawer)">
-            <mat-icon matListItemIcon>payments</mat-icon>
-            <span matListItemTitle>Fees</span>
-          </a>
+          @if (auth.isAccountant()) {
+            <a mat-list-item routerLink="/fees" routerLinkActive="active-link" (click)="closeOnHandset(drawer)">
+              <mat-icon matListItemIcon>payments</mat-icon>
+              <span matListItemTitle>Fees</span>
+            </a>
+          }
           <a mat-list-item routerLink="/timetable" routerLinkActive="active-link" (click)="closeOnHandset(drawer)">
             <mat-icon matListItemIcon>calendar_month</mat-icon>
             <span matListItemTitle>Timetable</span>

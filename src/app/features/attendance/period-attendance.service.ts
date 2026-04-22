@@ -4,6 +4,7 @@ import { environment } from '../../../environments/environment';
 import type {
   AttendancePagedResponse,
   PeriodAttendanceBulkMarkRequest,
+  PeriodAttendanceBulkMarkTimetableRequest,
   PeriodAttendanceListQuery,
   PeriodAttendanceRecord
 } from '../../core/models/attendance.models';
@@ -27,5 +28,9 @@ export class PeriodAttendanceService {
 
   bulkMark(body: PeriodAttendanceBulkMarkRequest) {
     return this.http.post(`${this.api}/bulk-mark`, body);
+  }
+
+  bulkMarkTimetable(body: PeriodAttendanceBulkMarkTimetableRequest) {
+    return this.http.post(`${this.api}/bulk-mark-timetable`, body);
   }
 }

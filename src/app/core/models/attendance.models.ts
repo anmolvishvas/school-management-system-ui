@@ -73,6 +73,8 @@ export interface PeriodAttendanceRecord {
   className?: string;
   section?: string;
   date: string;
+  startTime?: string;
+  endTime?: string;
   hourNumber: number;
   subjectId: number;
   subjectName?: string;
@@ -99,6 +101,16 @@ export interface PeriodAttendanceBulkMarkRequest {
   section: string;
   subjectId: number;
   hourNumber: number;
+  lines: Array<{
+    studentId: number;
+    status: AttendanceStatus;
+    notes?: string;
+  }>;
+}
+
+export interface PeriodAttendanceBulkMarkTimetableRequest {
+  date: string;
+  timetableEntryId: number;
   lines: Array<{
     studentId: number;
     status: AttendanceStatus;

@@ -1,0 +1,122 @@
+<div class="page-head">
+  <h1>Reports</h1>
+  <p class="muted">
+    Snapshot from dashboard KPIs, student stats (admin), attendance summary, and fee summary for the selected range.
+  </p>
+</div>
+
+<mat-card>
+  <mat-card-header>
+    <mat-card-title>Filters</mat-card-title>
+  </mat-card-header>
+  <mat-card-content>
+    <form class="filters" [formGroup]="filterForm" (ngSubmit)="load()">
+      <mat-form-field appearance="outline">
+        <mat-label>From</mat-label>
+        <input matInput type="date" formControlName="from" />
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>To</mat-label>
+        <input matInput type="date" formControlName="to" />
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Class</mat-label>
+        <input matInput formControlName="className" />
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Section</mat-label>
+        <input matInput formControlName="section" />
+      </mat-form-field>
+      <button mat-flat-button color="primary" type="submit">Refresh</button>
+    </form>
+  </mat-card-content>
+</mat-card>
+
+@if (loading()) {
+  <div class="loader"><mat-progress-spinner diameter="36" mode="indeterminate" /></div>
+} @else {
+  <div class="grid">
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title>Dashboard KPIs</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        @if (kpis(); as k) {
+          <ul class="kv">
+            <li><span>Students</span><strong>{{ k.totalStudents }}</strong></li>
+            <li><span>Attendance rate</span><strong>{{ k.attendanceRatePercent ?? '—' }}{{ k.attendanceRatePercent != null ? '%' : '' }}</strong></li>
+            <li><span>Fee collection (month)</span><strong>{{ k.feeCollectionThisMonth != null ? (k.feeCollectionThisMonth | number: '1.2-2') : '—' }}</strong></li>
+          </ul>
+        } @else {
+          <p class="muted">KPIs unavailable.</p>
+        }
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title>Attendance summary</mat-card-title>
+        <mat-card-subtitle>{{ filterForm.value.from }} → {{ filterForm.value.to }}</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        @if (attendanceSummary(); as s) {
+          <ul class="kv">
+            <li><span>Present</span><strong>{{ s.totalPresent }}</strong></li>
+            <li><span>Absent</span><strong>{{ s.totalAbsent }}</strong></li>
+            <li><span>Late</span><strong>{{ s.totalLate }}</strong></li>
+            <li><span>Excused</span><strong>{{ s.totalExcused }}</strong></li>
+            <li><span>Half day</span><strong>{{ s.totalHalfDay }}</strong></li>
+            <li><span>Rate</span><strong>{{ s.attendanceRatePercent }}%</strong></li>
+          </ul>
+        } @else {
+          <p class="muted">No summary for these filters (check GET /api/Attendance/summary).</p>
+        }
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title>Fee summary</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        @if (feeSummary(); as f) {
+          <ul class="kv">
+            <li><span>Total due</span><strong>{{ f.totalDue | number: '1.2-2' }}</strong></li>
+            <li><span>Collected</span><strong>{{ f.totalCollected | number: '1.2-2' }}</strong></li>
+            <li><span>Outstanding</span><strong>{{ f.outstanding | number: '1.2-2' }}</strong></li>
+          </ul>
+        } @else {
+          <p class="muted">Fee summary unavailable (check GET /api/Fees/reports/summary).</p>
+        }
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="wide">
+      <mat-card-header>
+        <mat-card-title>Student distribution</mat-card-title>
+        <mat-card-subtitle>Requires admin access to GET /api/Students/stats</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        @if (auth.isAdmin() && studentStats(); as st) {
+          <mat-divider />
+          <h4 class="sub">By class</h4>
+          <ul class="kv compact">
+            @for (b of st.byClass; track b.label) {
+              <li><span>{{ b.label }}</span><strong>{{ b.count }}</strong></li>
+            }
+          </ul>
+          <h4 class="sub">By section</h4>
+          <ul class="kv compact">
+            @for (b of st.bySection; track b.label) {
+              <li><span>{{ b.label }}</span><strong>{{ b.count }}</strong></li>
+            }
+          </ul>
+        } @else if (!auth.isAdmin()) {
+          <p class="muted">Sign in as Admin to view student stats.</p>
+        } @else {
+          <p class="muted">Stats unavailable or forbidden.</p>
+        }
+      </mat-card-content>
+    </mat-card>
+  </div>
+}

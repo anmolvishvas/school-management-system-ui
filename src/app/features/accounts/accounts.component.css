@@ -1,0 +1,44 @@
+.page-head h1 {
+  margin: 0 0 8px;
+  font-size: 1.5rem;
+}
+
+.muted {
+  margin: 0 0 16px;
+  opacity: 0.75;
+  font-size: 0.9rem;
+}
+
+.mt {
+  margin-top: 16px;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.row-tight {
+  margin-top: 8px;
+}
+
+.grow {
+  flex: 1;
+  min-width: 200px;
+}
+
+.table-wrap {
+  overflow: auto;
+}
+
+.full-table {
+  width: 100%;
+}
+
+.loader {
+  display: flex;
+  justify-content: center;
+  padding: 12px;
+}
