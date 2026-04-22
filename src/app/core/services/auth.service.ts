@@ -14,6 +14,8 @@ import type {
 
 const ROLE_CLAIM =
   'http://schemas.microsoft.com/ws/2008/06/identity/claims/role' as const;
+const NAME_ID_CLAIM =
+  'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier' as const;
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -118,6 +120,25 @@ export class AuthService {
 
   isAdmin(): boolean {
     return this.hasRole('Admin');
+  }
+
+  getUserId(): number | null {
+    const payload = this.decodePayload();
+    if (!payload) return null;
+    const candidates: unknown[] = [
+      payload[NAME_ID_CLAIM],
+      payload['sub'],
+      payload['userId'],
+      payload['id']
+    ];
+    for (const value of candidates) {
+      if (typeof value === 'number' && Number.isFinite(value)) return value;
+      if (typeof value === 'string' && value.trim()) {
+        const parsed = Number(value);
+        if (Number.isFinite(parsed)) return parsed;
+      }
+    }
+    return null;
   }
 
   private extractUserId(res: unknown): number {

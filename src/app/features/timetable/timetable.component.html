@@ -1,0 +1,361 @@
+<div class="page-head">
+  <h1>Timetable</h1>
+</div>
+
+<div class="grid">
+  @if (auth.isAdmin()) {
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title>Create / Update Slot</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <form [formGroup]="entryForm" (ngSubmit)="saveEntry()">
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Class</mat-label>
+            <mat-select formControlName="class" (selectionChange)="onEntryClassChange($event.value)">
+              @for (c of courses(); track c.id) {
+                <mat-option [value]="c.name">{{ c.name }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Section</mat-label>
+            <mat-select formControlName="section">
+              @for (s of sections(); track s.id) {
+                <mat-option [value]="s.section">{{ s.section }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <div class="row-2">
+            <mat-form-field appearance="outline">
+              <mat-label>Day</mat-label>
+              <mat-select formControlName="dayOfWeek">
+                @for (d of days; track d) {
+                  <mat-option [value]="d">{{ d }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Start time</mat-label>
+              <input matInput type="time" formControlName="startTime" />
+            </mat-form-field>
+          </div>
+          <div class="row-2">
+            <mat-form-field appearance="outline">
+              <mat-label>End time</mat-label>
+              <input matInput type="time" formControlName="endTime" />
+            </mat-form-field>
+          </div>
+
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Subject</mat-label>
+            <mat-select formControlName="subjectId">
+              @for (s of subjects(); track s.id) {
+                <mat-option [value]="s.id">{{ s.name }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Teacher</mat-label>
+            <mat-select formControlName="teacherId">
+              @for (t of teachers(); track t.id) {
+                <mat-option [value]="t.id">{{ t.fullName }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-slide-toggle formControlName="isActive">Active</mat-slide-toggle>
+
+          <div class="actions">
+            <button mat-flat-button color="primary" type="submit" [disabled]="submitting()">
+              {{ entryForm.value.id ? 'Update slot' : 'Create slot' }}
+            </button>
+            <button mat-stroked-button type="button" (click)="resetEntryForm()">Reset</button>
+          </div>
+        </form>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>Filters</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <form class="filters" [formGroup]="filtersForm">
+        <mat-form-field appearance="outline">
+          <mat-label>Class</mat-label>
+          <mat-select formControlName="className" (selectionChange)="onFilterClassChange($event.value)">
+            <mat-option value="">All</mat-option>
+            @for (c of courses(); track c.id) {
+              <mat-option [value]="c.name">{{ c.name }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Section</mat-label>
+          <mat-select formControlName="section">
+            <mat-option value="">All</mat-option>
+            @for (s of sections(); track s.id) {
+              <mat-option [value]="s.section">{{ s.section }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Day</mat-label>
+          <mat-select formControlName="dayOfWeek">
+            <mat-option value="">All</mat-option>
+            @for (d of days; track d) {
+              <mat-option [value]="d">{{ d }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Teacher</mat-label>
+          <mat-select formControlName="teacherId">
+            <mat-option [value]="0">All</mat-option>
+            @for (t of teachers(); track t.id) {
+              <mat-option [value]="t.id">{{ t.fullName }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </form>
+
+      <mat-slide-toggle [formControl]="filtersForm.controls.activeOnly">Active only</mat-slide-toggle>
+      <div class="actions">
+        <button mat-stroked-button type="button" (click)="loadEntries()">Apply filters</button>
+        <button mat-stroked-button type="button" (click)="loadClassSectionView()">Search weekly by section</button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>
+
+@if (auth.isAdmin()) {
+  <mat-card class="mt">
+    <mat-card-header>
+      <mat-card-title>Bulk Weekly Upsert</mat-card-title>
+      <mat-card-subtitle>Upsert by class + section + day + startTime + endTime</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <form [formGroup]="bulkForm" (ngSubmit)="saveBulkWeekly()">
+        <div class="row-2">
+          <mat-form-field appearance="outline">
+            <mat-label>Class</mat-label>
+            <mat-select formControlName="class" (selectionChange)="onBulkClassChange($event.value)">
+              @for (c of courses(); track c.id) {
+                <mat-option [value]="c.name">{{ c.name }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Section</mat-label>
+            <mat-select formControlName="section">
+              @for (s of sections(); track s.id) {
+                <mat-option [value]="s.section">{{ s.section }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        </div>
+
+        <div formArrayName="lines" class="bulk-lines">
+          @for (line of bulkLines.controls; track $index) {
+            <div class="bulk-line" [formGroupName]="$index">
+              <mat-form-field appearance="outline">
+                <mat-label>Day</mat-label>
+                <mat-select formControlName="dayOfWeek">
+                  @for (d of days; track d) {
+                    <mat-option [value]="d">{{ d }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Start time</mat-label>
+                <input matInput type="time" formControlName="startTime" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>End time</mat-label>
+                <input matInput type="time" formControlName="endTime" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Subject</mat-label>
+                <mat-select formControlName="subjectId">
+                  @for (s of subjects(); track s.id) {
+                    <mat-option [value]="s.id">{{ s.name }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Teacher</mat-label>
+                <mat-select formControlName="teacherId">
+                  @for (t of teachers(); track t.id) {
+                    <mat-option [value]="t.id">{{ t.fullName }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <mat-slide-toggle formControlName="isActive">Active</mat-slide-toggle>
+              <button mat-button color="warn" type="button" (click)="removeBulkLine($index)">Remove</button>
+            </div>
+          }
+        </div>
+
+        <div class="actions">
+          <button mat-stroked-button type="button" (click)="addBulkLine()">Add line</button>
+          <button mat-flat-button color="primary" type="submit" [disabled]="submitting()">Save weekly</button>
+          <button mat-stroked-button type="button" (click)="resetBulkForm()">Reset</button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+}
+
+<mat-card class="mt">
+  <mat-card-header>
+    <mat-card-title>Weekly Calendar</mat-card-title>
+    @if (isTeacher()) {
+      <mat-card-subtitle>Showing only your timetable</mat-card-subtitle>
+    }
+  </mat-card-header>
+  <mat-card-content>
+    <div class="table-wrap">
+      <table class="weekly-table">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Monday</th>
+            <th>Tuesday</th>
+            <th>Wednesday</th>
+            <th>Thursday</th>
+            <th>Friday</th>
+            <th>Saturday</th>
+            <th>Sunday</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of weeklyRows(); track row.slot) {
+            <tr>
+              <td class="slot">{{ row.slot }}</td>
+              @for (cell of row.cells; track $index) {
+                <td>
+                  @if (cell) {
+                    <div class="cal-cell">
+                      <div>{{ cell.subjectName || cell.subjectId }}</div>
+                      <div>{{ cell.teacherName || cell.teacherId }}</div>
+                      <div>{{ getClassValue(cell) }}/{{ cell.section || '-' }}</div>
+                    </div>
+                  } @else {
+                    <span class="muted">—</span>
+                  }
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </mat-card-content>
+</mat-card>
+
+@if (classSectionEntries().length > 0) {
+  <mat-card class="mt">
+    <mat-card-header>
+      <mat-card-title>Class-Section Timetable</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="table-wrap">
+        <table mat-table [dataSource]="classSectionEntries()" class="full-table">
+          <ng-container matColumnDef="dayOfWeek">
+            <th mat-header-cell *matHeaderCellDef>Day</th>
+            <td mat-cell *matCellDef="let row">{{ row.dayOfWeek }}</td>
+          </ng-container>
+          <ng-container matColumnDef="timeRange">
+            <th mat-header-cell *matHeaderCellDef>Time</th>
+            <td mat-cell *matCellDef="let row">{{ getTimeRange(row) }}</td>
+          </ng-container>
+          <ng-container matColumnDef="subject">
+            <th mat-header-cell *matHeaderCellDef>Subject</th>
+            <td mat-cell *matCellDef="let row">{{ row.subjectName || row.subjectId }}</td>
+          </ng-container>
+          <ng-container matColumnDef="teacher">
+            <th mat-header-cell *matHeaderCellDef>Teacher</th>
+            <td mat-cell *matCellDef="let row">{{ row.teacherName || row.teacherId }}</td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="['dayOfWeek', 'timeRange', 'subject', 'teacher']"></tr>
+          <tr mat-row *matRowDef="let row; columns: ['dayOfWeek', 'timeRange', 'subject', 'teacher']"></tr>
+        </table>
+      </div>
+    </mat-card-content>
+  </mat-card>
+}
+
+<mat-card class="mt">
+  <mat-card-header>
+    <mat-card-title>Timetable Entries</mat-card-title>
+  </mat-card-header>
+  <mat-card-content>
+    @if (loading()) {
+      <div class="loader"><mat-progress-spinner diameter="34" mode="indeterminate" /></div>
+    }
+    <div class="table-wrap">
+      <table mat-table [dataSource]="entries()" class="full-table">
+        <ng-container matColumnDef="id">
+          <th mat-header-cell *matHeaderCellDef>ID</th>
+          <td mat-cell *matCellDef="let row">{{ row.id }}</td>
+        </ng-container>
+        <ng-container matColumnDef="className">
+          <th mat-header-cell *matHeaderCellDef>Class</th>
+          <td mat-cell *matCellDef="let row">{{ getClassValue(row) }}</td>
+        </ng-container>
+        <ng-container matColumnDef="section">
+          <th mat-header-cell *matHeaderCellDef>Section</th>
+          <td mat-cell *matCellDef="let row">{{ row.section || '—' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="dayOfWeek">
+          <th mat-header-cell *matHeaderCellDef>Day</th>
+          <td mat-cell *matCellDef="let row">{{ row.dayOfWeek }}</td>
+        </ng-container>
+        <ng-container matColumnDef="timeRange">
+          <th mat-header-cell *matHeaderCellDef>Time</th>
+          <td mat-cell *matCellDef="let row">{{ getTimeRange(row) }}</td>
+        </ng-container>
+        <ng-container matColumnDef="subject">
+          <th mat-header-cell *matHeaderCellDef>Subject</th>
+          <td mat-cell *matCellDef="let row">{{ row.subjectName || row.subjectId }}</td>
+        </ng-container>
+        <ng-container matColumnDef="teacher">
+          <th mat-header-cell *matHeaderCellDef>Teacher</th>
+          <td mat-cell *matCellDef="let row">{{ row.teacherName || row.teacherId }}</td>
+        </ng-container>
+        <ng-container matColumnDef="isActive">
+          <th mat-header-cell *matHeaderCellDef>Status</th>
+          <td mat-cell *matCellDef="let row">{{ row.isActive === false ? 'Inactive' : 'Active' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef>Actions</th>
+          <td mat-cell *matCellDef="let row">
+            @if (auth.isAdmin()) {
+              <button mat-button type="button" (click)="editEntry(row)">Edit</button>
+              <button mat-button color="warn" type="button" (click)="deleteEntry(row.id)">Delete</button>
+            }
+            @if (!auth.isAdmin()) {
+              <span>—</span>
+            }
+          </td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="tableColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: tableColumns"></tr>
+      </table>
+
+      <mat-paginator
+        [length]="total()"
+        [pageIndex]="pageIndex"
+        [pageSize]="pageSize"
+        [pageSizeOptions]="[10, 20, 50]"
+        (page)="onPage($event)"
+        showFirstLastButtons
+      />
+    </div>
+  </mat-card-content>
+</mat-card>

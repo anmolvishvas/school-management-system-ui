@@ -64,9 +64,8 @@ export const routes: Routes = [
       },
       {
         path: 'timetable',
-        data: { title: 'Timetable & scheduling' },
         loadComponent: () =>
-          import('./features/shell/coming-soon.component').then((m) => m.ComingSoonComponent)
+          import('./features/timetable/timetable.component').then((m) => m.TimetableComponent)
       },
       {
         path: 'reports',

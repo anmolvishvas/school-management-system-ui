@@ -1,0 +1,95 @@
+.page-head h1 {
+  margin: 0 0 16px;
+  font-size: 1.5rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.full {
+  width: 100%;
+}
+
+.mt {
+  margin-top: 16px;
+}
+
+.row-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+}
+
+.bulk-lines {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.bulk-line {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+  border: 1px solid rgba(127, 127, 127, 0.25);
+  padding: 10px;
+  border-radius: 8px;
+  align-items: center;
+}
+
+.table-wrap {
+  overflow: auto;
+}
+
+.full-table {
+  width: 100%;
+}
+
+.loader {
+  display: flex;
+  justify-content: center;
+  padding: 12px;
+}
+
+.weekly-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 900px;
+}
+
+.weekly-table th,
+.weekly-table td {
+  border: 1px solid rgba(127, 127, 127, 0.25);
+  padding: 8px;
+  vertical-align: top;
+}
+
+.slot {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.cal-cell {
+  display: grid;
+  gap: 2px;
+  font-size: 0.86rem;
+}
+
+.muted {
+  opacity: 0.55;
+}
