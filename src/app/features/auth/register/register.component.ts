@@ -35,8 +35,10 @@ export class RegisterComponent {
   readonly roles: AppRole[] = ['Admin', 'Teacher', 'Student', 'Accountant'];
 
   readonly form = this.fb.nonNullable.group({
+    fullName: ['', [Validators.minLength(2)]],
     username: ['', [Validators.required, Validators.minLength(2)]],
     password: ['', [Validators.required, Validators.minLength(6)]],
+    phone: [''],
     email: [''],
     role: this.fb.nonNullable.control<AppRole>('Teacher', [Validators.required])
   });
@@ -50,20 +52,34 @@ export class RegisterComponent {
     }
     this.submitting = true;
     const v = this.form.getRawValue();
+    if (v.role === 'Teacher' && !v.fullName.trim()) {
+      this.toast.show('Full name is required for teacher profile.', 'error');
+      this.submitting = false;
+      return;
+    }
+
     this.auth
-      .register({
-        username: v.username,
+      .registerUserWithOptionalTeacherProfile({
+        username: v.username.trim(),
         password: v.password,
         role: v.role,
-        email: v.email?.trim() || undefined
+        email: v.email?.trim() || undefined,
+        fullName: v.fullName.trim() || undefined,
+        phone: v.phone?.trim() || undefined
       })
       .subscribe({
-        next: () => {
-          this.toast.show('User registered', 'success');
+        next: (res) => {
+          const msg =
+            v.role === 'Teacher'
+              ? res.userId
+                ? 'User and teacher profile created.'
+                : 'User created. Teacher profile skipped because backend register did not return user id.'
+              : 'User created.';
+          this.toast.show(msg, 'success');
           void this.router.navigate(['/students']);
         },
         error: () => {
-          this.toast.show('Registration failed (check permissions or validation).', 'error');
+          this.toast.show('Registration failed (check /auth/register and /teachers API validation).', 'error');
           this.submitting = false;
         },
         complete: () => {

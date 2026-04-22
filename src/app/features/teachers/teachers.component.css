@@ -1,0 +1,53 @@
+.page-head h1 {
+  margin: 0 0 16px;
+  font-size: 1.5rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.full {
+  width: 100%;
+}
+
+.mt {
+  margin-top: 16px;
+}
+
+.table-wrap {
+  overflow: auto;
+}
+
+.full-table {
+  width: 100%;
+}
+
+.filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+  align-items: center;
+}
+
+.loader {
+  display: flex;
+  justify-content: center;
+  padding: 12px;
+}
+
+.plan-wrap {
+  display: grid;
+  gap: 8px;
+}
+
+.group h4 {
+  margin: 6px 0;
+}
+
+.group p {
+  margin: 4px 0;
+}

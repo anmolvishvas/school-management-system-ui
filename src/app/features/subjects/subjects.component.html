@@ -1,0 +1,84 @@
+<div class="page-head">
+  <h1>Subjects</h1>
+</div>
+
+<div class="grid">
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>Create / Update Subject</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <form [formGroup]="form" (ngSubmit)="save()">
+        <mat-form-field appearance="outline" class="full">
+          <mat-label>Name</mat-label>
+          <input matInput formControlName="name" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="full">
+          <mat-label>Code (optional)</mat-label>
+          <input matInput formControlName="code" />
+        </mat-form-field>
+        <mat-slide-toggle formControlName="isActive">Active</mat-slide-toggle>
+        <div class="actions">
+          <button mat-flat-button color="primary" type="submit">
+            {{ form.value.id ? 'Update subject' : 'Create subject' }}
+          </button>
+          <button mat-stroked-button type="button" (click)="reset()">Reset</button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>Filters</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <mat-slide-toggle [checked]="activeOnly()" (change)="toggleActiveOnly($event.checked)">
+        Active only
+      </mat-slide-toggle>
+      <div class="actions">
+        <button mat-stroked-button type="button" (click)="load()">Refresh</button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>
+
+<mat-card class="mt">
+  <mat-card-header>
+    <mat-card-title>Subject List</mat-card-title>
+  </mat-card-header>
+  <mat-card-content>
+    @if (loading()) {
+      <div class="loader"><mat-progress-spinner diameter="32" mode="indeterminate" /></div>
+    }
+    <div class="table-wrap">
+      <table mat-table [dataSource]="subjects()" class="full-table">
+        <ng-container matColumnDef="id">
+          <th mat-header-cell *matHeaderCellDef>ID</th>
+          <td mat-cell *matCellDef="let s">{{ s.id }}</td>
+        </ng-container>
+        <ng-container matColumnDef="name">
+          <th mat-header-cell *matHeaderCellDef>Name</th>
+          <td mat-cell *matCellDef="let s">{{ s.name }}</td>
+        </ng-container>
+        <ng-container matColumnDef="code">
+          <th mat-header-cell *matHeaderCellDef>Code</th>
+          <td mat-cell *matCellDef="let s">{{ s.code || '—' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="isActive">
+          <th mat-header-cell *matHeaderCellDef>Status</th>
+          <td mat-cell *matCellDef="let s">{{ s.isActive === false ? 'Inactive' : 'Active' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef>Actions</th>
+          <td mat-cell *matCellDef="let s">
+            <button mat-button type="button" (click)="edit(s)">Edit</button>
+            <button mat-button color="warn" type="button" (click)="remove(s.id)">Delete</button>
+          </td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="columns"></tr>
+        <tr mat-row *matRowDef="let row; columns: columns"></tr>
+      </table>
+    </div>
+  </mat-card-content>
+</mat-card>

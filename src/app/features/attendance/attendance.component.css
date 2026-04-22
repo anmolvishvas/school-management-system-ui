@@ -1,0 +1,115 @@
+.page-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.page-head h1 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.head-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filters {
+  margin-bottom: 16px;
+}
+
+.filters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.period-info {
+  margin: 0 0 12px;
+  opacity: 0.8;
+}
+
+.tab-content {
+  padding-top: 16px;
+}
+
+.value {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.loader {
+  display: flex;
+  justify-content: center;
+  padding: 16px;
+}
+
+.table-wrap {
+  overflow: auto;
+  border-radius: 8px;
+  background: var(--mat-sys-surface);
+}
+
+.full-width {
+  width: 100%;
+}
+
+.status-field,
+.remark-field {
+  width: 140px;
+  margin: 4px 0 -18px;
+}
+
+.remark-field {
+  width: 220px;
+}
+
+.summary {
+  margin-top: 16px;
+}
+
+.period-list {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.period-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid color-mix(in srgb, var(--mat-sys-primary) 20%, transparent);
+  border-radius: 8px;
+  padding: 6px;
+}
+
+td.mat-column-actions {
+  white-space: nowrap;
+}
+
+.period-item.selected {
+  background: color-mix(in srgb, var(--mat-sys-primary) 10%, transparent);
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.muted {
+  margin: 0;
+  opacity: 0.75;
+}

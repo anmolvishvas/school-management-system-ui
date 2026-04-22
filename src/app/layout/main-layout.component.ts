@@ -50,6 +50,24 @@ import { AuthService } from '../core/services/auth.service';
             <mat-icon matListItemIcon>groups</mat-icon>
             <span matListItemTitle>Students</span>
           </a>
+          @if (auth.isAdmin()) {
+            <a mat-list-item routerLink="/courses" routerLinkActive="active-link" (click)="closeOnHandset(drawer)">
+              <mat-icon matListItemIcon>menu_book</mat-icon>
+              <span matListItemTitle>Courses</span>
+            </a>
+          }
+          @if (auth.isAdmin()) {
+            <a mat-list-item routerLink="/subjects" routerLinkActive="active-link" (click)="closeOnHandset(drawer)">
+              <mat-icon matListItemIcon>library_books</mat-icon>
+              <span matListItemTitle>Subjects</span>
+            </a>
+          }
+          @if (auth.isAdmin()) {
+            <a mat-list-item routerLink="/teachers" routerLinkActive="active-link" (click)="closeOnHandset(drawer)">
+              <mat-icon matListItemIcon>person</mat-icon>
+              <span matListItemTitle>Teachers</span>
+            </a>
+          }
           <a mat-list-item routerLink="/attendance" routerLinkActive="active-link" (click)="closeOnHandset(drawer)">
             <mat-icon matListItemIcon>event_available</mat-icon>
             <span matListItemTitle>Attendance</span>

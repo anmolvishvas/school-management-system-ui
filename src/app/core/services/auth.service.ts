@@ -1,9 +1,16 @@
 import { isPlatformBrowser } from '@angular/common';
 import { inject, Injectable, PLATFORM_ID } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { tap } from 'rxjs/operators';
+import { map, switchMap, tap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
-import type { AppRole, LoginRequest, LoginResponse, RegisterRequest } from '../models/auth.models';
+import { Observable, of } from 'rxjs';
+import type {
+  AppRole,
+  CreateTeacherRequest,
+  LoginRequest,
+  LoginResponse,
+  RegisterRequest
+} from '../models/auth.models';
 
 const ROLE_CLAIM =
   'http://schemas.microsoft.com/ws/2008/06/identity/claims/role' as const;
@@ -13,6 +20,7 @@ export class AuthService {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly http = inject(HttpClient);
   private readonly api = `${environment.apiBaseUrl}/api/Auth`;
+  private readonly teachersApi = `${environment.apiBaseUrl}/api/Teachers`;
 
   login(data: LoginRequest) {
     return this.http.post<LoginResponse>(`${this.api}/login`, data).pipe(
@@ -24,6 +32,49 @@ export class AuthService {
 
   register(body: RegisterRequest) {
     return this.http.post(`${this.api}/register`, body);
+  }
+
+  createTeacher(body: CreateTeacherRequest) {
+    return this.http.post(this.teachersApi, body);
+  }
+
+  /**
+   * Registration flow used by frontend:
+   * 1) POST /api/Auth/register
+   * 2) If role is Teacher and response contains user id => POST /api/Teachers
+   */
+  registerUserWithOptionalTeacherProfile(input: {
+    username: string;
+    password: string;
+    role: AppRole;
+    email?: string;
+    fullName?: string;
+    phone?: string;
+  }): Observable<{ userId: number }> {
+    return this.register({
+      username: input.username,
+      password: input.password,
+      role: input.role,
+      email: input.email
+    }).pipe(
+      map((res) => {
+        const userId = this.extractUserId(res);
+        return userId;
+      }),
+      switchMap((userId) => {
+        if (input.role !== 'Teacher') return of({ userId });
+        // Some /api/Auth/register implementations return only a message, no user id.
+        if (!userId) return of({ userId: 0 });
+        if (!input.fullName?.trim()) throw new Error('Teacher full name is required');
+        return this.createTeacher({
+          userId,
+          fullName: input.fullName.trim(),
+          phone: input.phone?.trim() || undefined,
+          email: input.email?.trim() || undefined,
+          isActive: true
+        }).pipe(map(() => ({ userId })));
+      })
+    );
   }
 
   saveToken(token: string) {
@@ -67,6 +118,15 @@ export class AuthService {
 
   isAdmin(): boolean {
     return this.hasRole('Admin');
+  }
+
+  private extractUserId(res: unknown): number {
+    if (typeof res === 'object' && res !== null) {
+      const withId = res as { id?: unknown; userId?: unknown };
+      if (typeof withId.id === 'number') return withId.id;
+      if (typeof withId.userId === 'number') return withId.userId;
+    }
+    return 0;
   }
 
   private decodePayload(): Record<string, unknown> | null {

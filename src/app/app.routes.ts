@@ -34,10 +34,27 @@ export const routes: Routes = [
           import('./features/students/students.component').then((m) => m.StudentsComponent)
       },
       {
-        path: 'attendance',
-        data: { title: 'Attendance' },
+        path: 'courses',
+        canActivate: [adminGuard],
         loadComponent: () =>
-          import('./features/shell/coming-soon.component').then((m) => m.ComingSoonComponent)
+          import('./features/courses/courses.component').then((m) => m.CoursesComponent)
+      },
+      {
+        path: 'subjects',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./features/subjects/subjects.component').then((m) => m.SubjectsComponent)
+      },
+      {
+        path: 'teachers',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./features/teachers/teachers.component').then((m) => m.TeachersComponent)
+      },
+      {
+        path: 'attendance',
+        loadComponent: () =>
+          import('./features/attendance/attendance.component').then((m) => m.AttendanceComponent)
       },
       {
         path: 'fees',

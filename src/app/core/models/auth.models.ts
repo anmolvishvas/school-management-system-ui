@@ -19,3 +19,11 @@ export interface RegisterRequest {
   role: AppRole;
   email?: string;
 }
+
+export interface CreateTeacherRequest {
+  userId: number;
+  fullName: string;
+  phone?: string;
+  email?: string;
+  isActive: boolean;
+}

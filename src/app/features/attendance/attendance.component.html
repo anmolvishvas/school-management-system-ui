@@ -1,0 +1,479 @@
+<div class="page-head">
+  <h1>Attendance</h1>
+</div>
+
+<mat-card class="filters">
+  <mat-card-content class="filters-grid">
+    <mat-form-field appearance="outline">
+      <mat-label>Date</mat-label>
+      <input matInput type="date" [formControl]="dateCtrl" (change)="loadDaily(); loadPeriodDaily(); loadAttendanceList()" />
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Class</mat-label>
+      <input matInput [formControl]="classCtrl" (change)="onFilterChange()" placeholder="e.g. 10" />
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Section</mat-label>
+      <input matInput [formControl]="sectionCtrl" (change)="onFilterChange()" placeholder="e.g. A" />
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>From</mat-label>
+      <input matInput type="date" [formControl]="fromCtrl" (change)="loadSummary(); loadAttendanceList()" />
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>To</mat-label>
+      <input matInput type="date" [formControl]="toCtrl" (change)="loadSummary(); loadAttendanceList()" />
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Subject</mat-label>
+      <input matInput [formControl]="subjectCtrl" placeholder="e.g. Mathematics (note metadata)" />
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Teacher</mat-label>
+      <input matInput [formControl]="teacherCtrl" placeholder="e.g. Ms. Sharma" />
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Start time</mat-label>
+      <input matInput type="time" [formControl]="startTimeCtrl" />
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>End time</mat-label>
+      <input matInput type="time" [formControl]="endTimeCtrl" />
+    </mat-form-field>
+  </mat-card-content>
+</mat-card>
+
+<p class="period-info">Period duration: <strong>{{ periodHours() }} hours</strong></p>
+
+<mat-tab-group>
+  <mat-tab label="Daily Attendance">
+    <div class="tab-content">
+      <div class="head-actions">
+        <button mat-stroked-button type="button" (click)="markAll('Present')">Mark all present</button>
+        <button mat-stroked-button type="button" (click)="markAll('Absent')">Mark all absent</button>
+        @if (canWriteAttendance()) {
+          <button mat-flat-button color="primary" type="button" [disabled]="saving()" (click)="saveDaily()">
+            {{ saving() ? 'Saving...' : 'Save attendance' }}
+          </button>
+        }
+      </div>
+
+      <mat-card class="summary">
+        <mat-card-header>
+          <mat-card-title>Day periods and teacher allocation</mat-card-title>
+          <mat-card-subtitle>One subject maps to one teacher; a teacher can handle many subjects</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="head-actions">
+            <button mat-stroked-button type="button" (click)="addPeriod()">Add period</button>
+            <span class="muted">Selected period metadata is included in notes while saving.</span>
+          </div>
+          <div class="period-list">
+            @for (p of periods(); track p.id) {
+              <div class="period-item" [class.selected]="selectedPeriodId() === p.id">
+                <button mat-button type="button" (click)="selectPeriod(p.id)">
+                  {{ p.subject }} ({{ p.startTime }}-{{ p.endTime }}, {{ p.teacher }}, {{ periodHoursFor(p.startTime, p.endTime) }}h)
+                </button>
+                <button mat-button color="warn" type="button" (click)="removePeriod(p.id)">Remove</button>
+              </div>
+            }
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <div class="stats">
+        <mat-card>
+          <mat-card-title>Total records</mat-card-title>
+          <mat-card-content class="value">{{ rows().length }}</mat-card-content>
+        </mat-card>
+        <mat-card>
+          <mat-card-title>Present</mat-card-title>
+          <mat-card-content class="value">{{ presentCount() }}</mat-card-content>
+        </mat-card>
+        <mat-card>
+          <mat-card-title>Absent</mat-card-title>
+          <mat-card-content class="value">{{ absentCount() }}</mat-card-content>
+        </mat-card>
+        <mat-card>
+          <mat-card-title>Rate (%)</mat-card-title>
+          <mat-card-content class="value">{{ summary()?.attendanceRatePercent ?? '—' }}</mat-card-content>
+        </mat-card>
+      </div>
+
+      @if (loadingSheet()) {
+        <div class="loader"><mat-progress-spinner diameter="40" mode="indeterminate" /></div>
+      }
+
+      <div class="table-wrap mat-elevation-z1">
+        <table mat-table [dataSource]="rows()" class="full-width">
+          <ng-container matColumnDef="studentId">
+            <th mat-header-cell *matHeaderCellDef>ID</th>
+            <td mat-cell *matCellDef="let r">{{ r.studentId }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="studentName">
+            <th mat-header-cell *matHeaderCellDef>Student</th>
+            <td mat-cell *matCellDef="let r">{{ r.studentName }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="className">
+            <th mat-header-cell *matHeaderCellDef>Class</th>
+            <td mat-cell *matCellDef="let r">{{ r.className }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="section">
+            <th mat-header-cell *matHeaderCellDef>Section</th>
+            <td mat-cell *matCellDef="let r">{{ r.section }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef>Status</th>
+            <td mat-cell *matCellDef="let r">
+              <mat-form-field appearance="outline" class="status-field">
+                <mat-select [value]="r.status" (valueChange)="onStatusChange(r.studentId, $event)">
+                  @for (option of statusOptions; track option) {
+                    <mat-option [value]="option">{{ option }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="remark">
+            <th mat-header-cell *matHeaderCellDef>Remark</th>
+            <td mat-cell *matCellDef="let r">
+              <mat-form-field appearance="outline" class="remark-field">
+                <input matInput [value]="r.notes ?? ''" (input)="onRemarkChange(r.studentId, $any($event.target).value)" />
+              </mat-form-field>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+        </table>
+      </div>
+    </div>
+  </mat-tab>
+
+  <mat-tab label="Period / Hour Attendance">
+    <div class="tab-content">
+      <mat-card class="summary">
+        <mat-card-header>
+          <mat-card-title>Subjects</mat-card-title>
+          <mat-card-subtitle>/api/Subjects</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="filters-grid">
+            <mat-form-field appearance="outline">
+              <mat-label>Select subject</mat-label>
+              <mat-select [value]="periodSubjectIdCtrl.value" (valueChange)="periodSubjectIdCtrl.setValue($event); loadPeriodDaily(); loadPeriodAttendanceList()">
+                @for (s of subjects(); track s.id) {
+                  <mat-option [value]="s.id">{{ s.name }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Hour number</mat-label>
+              <input matInput type="number" [formControl]="hourNumberCtrl" min="1" (change)="loadPeriodDaily(); loadPeriodAttendanceList()" />
+            </mat-form-field>
+          </div>
+
+          @if (auth.isAdmin()) {
+            <div class="filters-grid">
+              <mat-form-field appearance="outline">
+                <mat-label>Subject name</mat-label>
+                <input matInput [formControl]="subjectNameCtrl" />
+              </mat-form-field>
+            </div>
+            <div class="head-actions">
+              <button mat-stroked-button type="button" (click)="createSubject()">Create Subject</button>
+            </div>
+            <div class="period-list">
+              @for (s of subjects(); track s.id) {
+                <div class="period-item">
+                  <span>{{ s.name }}</span>
+                  <button mat-button color="warn" type="button" (click)="deleteSubject(s.id)">Delete</button>
+                </div>
+              }
+            </div>
+          }
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="summary">
+        <mat-card-header>
+          <mat-card-title>Teacher Allocations</mat-card-title>
+          <mat-card-subtitle>/api/Teachers/allocations + teaching plan</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          @if (auth.isAdmin()) {
+            <div class="filters-grid">
+              <mat-form-field appearance="outline">
+                <mat-label>Teacher</mat-label>
+                <mat-select [value]="allocationTeacherIdCtrl.value" (valueChange)="allocationTeacherIdCtrl.setValue($event)">
+                  @for (t of teachers(); track t.id) {
+                    <mat-option [value]="t.id">{{ t.fullName }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Subject</mat-label>
+                <mat-select [value]="allocationSubjectIdCtrl.value" (valueChange)="allocationSubjectIdCtrl.setValue($event)">
+                  @for (s of subjects(); track s.id) {
+                    <mat-option [value]="s.id">{{ s.name }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+            </div>
+            <div class="head-actions">
+              <button mat-stroked-button type="button" (click)="createAllocation()">Create Allocation</button>
+            </div>
+          }
+
+          <div class="period-list">
+            @for (a of allocations(); track a.id) {
+              <div class="period-item">
+                <span>{{ a.teacherName || a.teacherId }} -> {{ a.subjectName || a.subjectId }} ({{ a.className || '-' }}/{{ a.section || '-' }})</span>
+                <div class="head-actions">
+                  <button mat-button type="button" (click)="loadTeacherPlan(a.teacherId)">Plan</button>
+                  @if (auth.isAdmin()) {
+                    <button mat-button color="warn" type="button" (click)="deleteAllocation(a.id)">Delete</button>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+
+          @if (selectedTeacherPlan(); as plan) {
+            <mat-card class="summary">
+              <mat-card-header>
+                <mat-card-title>Teaching Plan</mat-card-title>
+                <mat-card-subtitle>{{ plan.teacher?.fullName || 'Teacher' }}</mat-card-subtitle>
+              </mat-card-header>
+              <mat-card-content>
+                <div class="period-list">
+                  @for (g of plan.groups || []; track $index) {
+                    <div class="period-item">
+                      <span><strong>{{ g.className || '-' }}/{{ g.section || '-' }}</strong></span>
+                    </div>
+                    @for (s of g.subjects || []; track s.subjectId) {
+                      <div class="period-item">
+                        <span>{{ s.subjectName || s.subjectId }} - weeklyPeriods: {{ s.weeklyPeriods ?? 0 }}</span>
+                      </div>
+                    }
+                  }
+                </div>
+              </mat-card-content>
+            </mat-card>
+          }
+        </mat-card-content>
+      </mat-card>
+
+      <div class="head-actions">
+        <button mat-stroked-button type="button" (click)="markAllPeriod('Present')">Mark all present</button>
+        <button mat-stroked-button type="button" (click)="markAllPeriod('Absent')">Mark all absent</button>
+        @if (canWriteAttendance()) {
+          <button mat-flat-button color="primary" type="button" [disabled]="periodSaving()" (click)="savePeriodAttendance()">
+            {{ periodSaving() ? 'Saving...' : 'Save period attendance' }}
+          </button>
+        }
+      </div>
+
+      @if (loadingPeriodSheet()) {
+        <div class="loader"><mat-progress-spinner diameter="40" mode="indeterminate" /></div>
+      }
+      <div class="table-wrap mat-elevation-z1">
+        <table mat-table [dataSource]="periodRows()" class="full-width">
+          <ng-container matColumnDef="studentId">
+            <th mat-header-cell *matHeaderCellDef>ID</th>
+            <td mat-cell *matCellDef="let r">{{ r.studentId }}</td>
+          </ng-container>
+          <ng-container matColumnDef="studentName">
+            <th mat-header-cell *matHeaderCellDef>Student</th>
+            <td mat-cell *matCellDef="let r">{{ r.studentName }}</td>
+          </ng-container>
+          <ng-container matColumnDef="className">
+            <th mat-header-cell *matHeaderCellDef>Class</th>
+            <td mat-cell *matCellDef="let r">{{ r.className }}</td>
+          </ng-container>
+          <ng-container matColumnDef="section">
+            <th mat-header-cell *matHeaderCellDef>Section</th>
+            <td mat-cell *matCellDef="let r">{{ r.section }}</td>
+          </ng-container>
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef>Status</th>
+            <td mat-cell *matCellDef="let r">
+              <mat-form-field appearance="outline" class="status-field">
+                <mat-select [value]="r.status" (valueChange)="onPeriodStatusChange(r.studentId, $event)">
+                  @for (option of statusOptions; track option) {
+                    <mat-option [value]="option">{{ option }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="remark">
+            <th mat-header-cell *matHeaderCellDef>Remark</th>
+            <td mat-cell *matCellDef="let r">
+              <mat-form-field appearance="outline" class="remark-field">
+                <input matInput [value]="r.notes ?? ''" (input)="onPeriodRemarkChange(r.studentId, $any($event.target).value)" />
+              </mat-form-field>
+            </td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+        </table>
+      </div>
+    </div>
+  </mat-tab>
+
+  <mat-tab label="Reports & History">
+    <div class="tab-content">
+      <mat-card class="summary">
+        <mat-card-header>
+          <mat-card-title>Attendance summary</mat-card-title>
+          <mat-card-subtitle>{{ fromCtrl.value }} to {{ toCtrl.value }}</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          @if (loadingSummary()) {
+            <div class="loader"><mat-progress-spinner diameter="32" mode="indeterminate" /></div>
+          } @else if (summary(); as s) {
+            <div class="summary-grid">
+              <div><strong>Present:</strong> {{ s.totalPresent }}</div>
+              <div><strong>Absent:</strong> {{ s.totalAbsent }}</div>
+              <div><strong>Late:</strong> {{ s.totalLate }}</div>
+              <div><strong>HalfDay:</strong> {{ s.totalHalfDay }}</div>
+              <div><strong>Excused:</strong> {{ s.totalExcused }}</div>
+              <div><strong>Attendance Rate:</strong> {{ s.attendanceRatePercent }}%</div>
+            </div>
+          } @else {
+            <p class="muted">Summary unavailable for selected filters.</p>
+          }
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="summary">
+        <mat-card-header>
+          <mat-card-title>Daily attendance history</mat-card-title>
+          <mat-card-subtitle>Paged list from <code>GET /api/Attendance</code></mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          @if (listLoading()) {
+            <div class="loader"><mat-progress-spinner diameter="32" mode="indeterminate" /></div>
+          }
+          <div class="table-wrap mat-elevation-z1">
+            <table mat-table [dataSource]="attendanceList()" class="full-width">
+              <ng-container matColumnDef="date">
+                <th mat-header-cell *matHeaderCellDef>Date</th>
+                <td mat-cell *matCellDef="let r">{{ r.date | date: 'yyyy-MM-dd' }}</td>
+              </ng-container>
+              <ng-container matColumnDef="studentId">
+                <th mat-header-cell *matHeaderCellDef>Student ID</th>
+                <td mat-cell *matCellDef="let r">{{ r.studentId }}</td>
+              </ng-container>
+              <ng-container matColumnDef="studentName">
+                <th mat-header-cell *matHeaderCellDef>Student</th>
+                <td mat-cell *matCellDef="let r">{{ r.studentName || '—' }}</td>
+              </ng-container>
+              <ng-container matColumnDef="className">
+                <th mat-header-cell *matHeaderCellDef>Class</th>
+                <td mat-cell *matCellDef="let r">{{ r.className || '—' }}</td>
+              </ng-container>
+              <ng-container matColumnDef="section">
+                <th mat-header-cell *matHeaderCellDef>Section</th>
+                <td mat-cell *matCellDef="let r">{{ r.section || '—' }}</td>
+              </ng-container>
+              <ng-container matColumnDef="status">
+                <th mat-header-cell *matHeaderCellDef>Status</th>
+                <td mat-cell *matCellDef="let r">{{ r.status }}</td>
+              </ng-container>
+              <ng-container matColumnDef="notes">
+                <th mat-header-cell *matHeaderCellDef>Notes</th>
+                <td mat-cell *matCellDef="let r">{{ r.notes || '—' }}</td>
+              </ng-container>
+              <ng-container matColumnDef="actions">
+                <th mat-header-cell *matHeaderCellDef>Actions</th>
+                <td mat-cell *matCellDef="let r">
+                  @if (canWriteAttendance()) {
+                    <button mat-button type="button" (click)="editAttendanceRow(r)">Update</button>
+                  }
+                  @if (auth.isAdmin()) {
+                    <button mat-button color="warn" type="button" (click)="deleteAttendanceRow(r)">Delete</button>
+                  }
+                </td>
+              </ng-container>
+              <tr mat-header-row *matHeaderRowDef="listColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: listColumns"></tr>
+            </table>
+            <mat-paginator
+              [length]="listTotal()"
+              [pageIndex]="listPageIndex"
+              [pageSize]="listPageSize"
+              [pageSizeOptions]="[10, 25, 50]"
+              (page)="onListPage($event)"
+              showFirstLastButtons
+            />
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="summary">
+        <mat-card-header>
+          <mat-card-title>Period attendance history</mat-card-title>
+          <mat-card-subtitle>Paged list from <code>GET /api/PeriodAttendance</code></mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          @if (periodListLoading()) {
+            <div class="loader"><mat-progress-spinner diameter="32" mode="indeterminate" /></div>
+          }
+          <div class="table-wrap mat-elevation-z1">
+            <table mat-table [dataSource]="periodAttendanceList()" class="full-width">
+              <ng-container matColumnDef="date">
+                <th mat-header-cell *matHeaderCellDef>Date</th>
+                <td mat-cell *matCellDef="let r">{{ r.date | date: 'yyyy-MM-dd' }}</td>
+              </ng-container>
+              <ng-container matColumnDef="hourNumber">
+                <th mat-header-cell *matHeaderCellDef>Hour</th>
+                <td mat-cell *matCellDef="let r">{{ r.hourNumber }}</td>
+              </ng-container>
+              <ng-container matColumnDef="subjectName">
+                <th mat-header-cell *matHeaderCellDef>Subject</th>
+                <td mat-cell *matCellDef="let r">{{ r.subjectName || r.subjectId }}</td>
+              </ng-container>
+              <ng-container matColumnDef="teacherName">
+                <th mat-header-cell *matHeaderCellDef>Teacher</th>
+                <td mat-cell *matCellDef="let r">{{ r.teacherName || '—' }}</td>
+              </ng-container>
+              <ng-container matColumnDef="studentId">
+                <th mat-header-cell *matHeaderCellDef>Student ID</th>
+                <td mat-cell *matCellDef="let r">{{ r.studentId }}</td>
+              </ng-container>
+              <ng-container matColumnDef="studentName">
+                <th mat-header-cell *matHeaderCellDef>Student</th>
+                <td mat-cell *matCellDef="let r">{{ r.studentName || '—' }}</td>
+              </ng-container>
+              <ng-container matColumnDef="status">
+                <th mat-header-cell *matHeaderCellDef>Status</th>
+                <td mat-cell *matCellDef="let r">{{ r.status }}</td>
+              </ng-container>
+              <ng-container matColumnDef="notes">
+                <th mat-header-cell *matHeaderCellDef>Notes</th>
+                <td mat-cell *matCellDef="let r">{{ r.notes || '—' }}</td>
+              </ng-container>
+              <tr mat-header-row *matHeaderRowDef="periodListColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: periodListColumns"></tr>
+            </table>
+            <mat-paginator
+              [length]="periodListTotal()"
+              [pageIndex]="periodListPageIndex"
+              [pageSize]="periodListPageSize"
+              [pageSizeOptions]="[10, 25, 50]"
+              (page)="onPeriodListPage($event)"
+              showFirstLastButtons
+            />
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </mat-tab>
+</mat-tab-group>
